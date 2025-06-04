@@ -13,8 +13,9 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Location } from '@/types';
+import { Location, LocationStatus, LocationWithStatus } from '@/types';
 import * as timeEntryService from './timeEntryService';
+import * as userService from './userService';
 import { getISOWeekNumber } from '@/lib/utils';
 
 export const addLocation = async (locationData: Omit<Location, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'>) => {
@@ -184,7 +185,7 @@ export const getLocationsDueForService = async () => {
   }
 };
 
-export const getLocationsWithWeeklyStatus = async (weekNumber: number) => {
+export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<LocationWithStatus[]> => {
   try {
     // Get all active locations
     const q = query(
@@ -206,16 +207,46 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number) => {
         weekNumber >= location.startWeek && 
         (weekNumber - location.startWeek) % location.maintenanceFrequency === 0;
 
+      if (!isDueForMaintenanceInSelectedWeek) {
+        return {
+          ...location,
+          status: 'planlagt' as LocationStatus,
+          timeEntries: [],
+          taggedEmployees: []
+        };
+      }
+
       // Get time entries for this location in the selected week
       const timeEntries = await timeEntryService.getTimeEntriesForLocation(location.id, weekNumber);
       
-      // Location is considered completed if there are any time entries for this week
-      const isMaintenanceCompletedInSelectedWeek = timeEntries.length > 0;
+      // Get tagged employees if any
+      const taggedEmployeeIds = timeEntries.flatMap(entry => entry.taggedEmployeeIds || []);
+      const taggedEmployees = taggedEmployeeIds.length > 0 
+        ? await userService.getUsersByIds(taggedEmployeeIds)
+        : [];
+
+      // Determine status based on time entries and tagged employees
+      let status: LocationStatus = 'planlagt';
+
+      if (timeEntries.length > 0) {
+        if (taggedEmployeeIds.length > 0) {
+          // Check if all tagged employees have submitted their hours
+          const allTaggedEmployeesSubmitted = taggedEmployeeIds.every(employeeId =>
+            timeEntries.some(entry => entry.employeeId === employeeId)
+          );
+          status = allTaggedEmployeesSubmitted ? 'fullfort' : 'ikke_utfort';
+        } else {
+          status = 'fullfort';
+        }
+      } else if (taggedEmployeeIds.length > 0) {
+        status = 'ikke_utfort';
+      }
 
       return {
         ...location,
-        isDueForMaintenanceInSelectedWeek,
-        isMaintenanceCompletedInSelectedWeek
+        status,
+        timeEntries,
+        taggedEmployees
       };
     }));
 

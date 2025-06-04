@@ -96,7 +96,7 @@ export interface Notification {
   };
 }
 
-export type LocationStatus = 'pending' | 'waiting' | 'completed';
+export type LocationStatus = 'planlagt' | 'ikke_utfort' | 'fullfort';
 
 export interface LocationWithStatus extends Location {
   status: LocationStatus;
