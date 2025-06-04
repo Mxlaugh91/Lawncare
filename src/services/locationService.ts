@@ -166,7 +166,7 @@ export const getLocationsDueForService = async () => {
     const querySnapshot = await getDocs(q);
     
     const now = new Date();
-    const currentWeek = Math.ceil((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+    const currentWeek = getISOWeekNumber(now);
     
     return querySnapshot.docs
       .map(doc => ({
@@ -216,10 +216,18 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
         weekNumber >= location.startWeek && 
         (weekNumber - location.startWeek) % location.maintenanceFrequency === 0;
 
-      if (!isDueForMaintenanceInSelectedWeek) {
+      // Check if edge cutting is due this week
+      const isDueForEdgeCuttingInSelectedWeek = 
+        weekNumber >= location.startWeek && 
+        (weekNumber - location.startWeek) % location.edgeCuttingFrequency === 0;
+
+      // If neither maintenance nor edge cutting is due, return early
+      if (!isDueForMaintenanceInSelectedWeek && !isDueForEdgeCuttingInSelectedWeek) {
         return {
           ...location,
           status: 'planlagt' as LocationStatus,
+          isDueForMaintenanceInSelectedWeek,
+          isDueForEdgeCuttingInSelectedWeek,
           timeEntries: [],
           taggedEmployees: []
         };
@@ -245,6 +253,8 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
       return {
         ...location,
         status,
+        isDueForMaintenanceInSelectedWeek,
+        isDueForEdgeCuttingInSelectedWeek,
         timeEntries,
         taggedEmployees
       };

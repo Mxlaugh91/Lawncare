@@ -100,6 +100,8 @@ export type LocationStatus = 'planlagt' | 'ikke_utfort' | 'fullfort';
 
 export interface LocationWithStatus extends Location {
   status: LocationStatus;
+  isDueForMaintenanceInSelectedWeek: boolean;
+  isDueForEdgeCuttingInSelectedWeek: boolean;
   timeEntries?: TimeEntry[];
   taggedEmployees?: User[];
 }
