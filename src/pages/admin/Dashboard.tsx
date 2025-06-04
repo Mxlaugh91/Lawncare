@@ -10,10 +10,9 @@ import {
   CheckCircle2, 
   ArrowRight
 } from 'lucide-react';
-import * as locationService from '@/services/locationService';
-import * as timeEntryService from '@/services/timeEntryService';
+import * as adminService from '@/services/adminService';
 import { useToast } from '@/hooks/use-toast';
-import { Location, TimeEntry } from '@/types';
+import { TimeEntry } from '@/types';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -31,27 +30,16 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        
-        // Get all active locations
-        const activeLocations = await locationService.getActiveLocations();
-        
-        // Get locations due for service
-        const dueLocations = await locationService.getLocationsDueForService();
-        
-        // Get weekly aggregated hours by employee
-        const weeklyHours = await timeEntryService.getWeeklyAggregatedHoursByEmployee();
-        
-        // Get recent time entries
-        const recentEntries = await timeEntryService.getRecentTimeEntries(5);
+        const dashboardStats = await adminService.getDashboardStats();
         
         setStats({
-          remainingLocations: dueLocations.length,
-          completedThisWeek: recentEntries.length,
-          totalLocations: activeLocations.length,
-          activeEmployees: Object.keys(weeklyHours).length
+          remainingLocations: dashboardStats.remainingLocations,
+          completedThisWeek: dashboardStats.completedThisWeek,
+          totalLocations: dashboardStats.totalLocations,
+          activeEmployees: dashboardStats.activeEmployees
         });
         
-        setRecentActivity(recentEntries);
+        setRecentActivity(dashboardStats.recentActivity);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
