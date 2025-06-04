@@ -1,15 +1,6 @@
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  getDocs 
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { getISOWeekNumber } from '@/lib/utils';
 import * as locationService from './locationService';
 import * as timeEntryService from './timeEntryService';
-import { getISOWeekNumber } from '@/lib/utils';
 
 export interface DashboardStats {
   remainingLocations: number;
@@ -29,11 +20,11 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     
     // Calculate remaining and completed locations
     const remainingLocations = locationsWithStatus.filter(
-      loc => loc.isDueForMaintenanceInSelectedWeek && !loc.isMaintenanceCompletedInSelectedWeek
+      loc => loc.status === 'ikke_utfort' || loc.status === 'planlagt'
     ).length;
 
     const completedThisWeek = locationsWithStatus.filter(
-      loc => loc.isDueForMaintenanceInSelectedWeek && loc.isMaintenanceCompletedInSelectedWeek
+      loc => loc.status === 'fullfort'
     ).length;
     
     // Get weekly aggregated hours by employee
