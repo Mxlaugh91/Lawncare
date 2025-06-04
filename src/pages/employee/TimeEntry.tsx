@@ -75,13 +75,32 @@ const EmployeeTimeEntry = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [locationData, mowerData, employeeData] = await Promise.all([
-          locationService.getActiveLocations(),
+        
+        // Get locations with weekly status
+        const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
+        
+        // Filter out completed locations
+        const availableLocations = locationsWithStatus
+          .filter(loc => loc.status !== 'fullfort')
+          .map(loc => ({
+            id: loc.id,
+            name: loc.name,
+            address: loc.address,
+            maintenanceFrequency: loc.maintenanceFrequency,
+            edgeCuttingFrequency: loc.edgeCuttingFrequency,
+            startWeek: loc.startWeek,
+            notes: loc.notes,
+            isArchived: loc.isArchived,
+            createdAt: loc.createdAt,
+            updatedAt: loc.updatedAt,
+          }));
+
+        const [mowerData, employeeData] = await Promise.all([
           equipmentService.getAllMowers(),
           userService.getAllEmployees()
         ]);
         
-        setLocations(locationData);
+        setLocations(availableLocations);
         setMowers(mowerData);
         setEmployees(employeeData.filter(emp => emp.id !== currentUser?.uid));
       } catch (error) {
@@ -97,7 +116,7 @@ const EmployeeTimeEntry = () => {
     };
 
     fetchData();
-  }, [toast, currentUser]);
+  }, [toast, currentUser, currentWeek]);
 
   useEffect(() => {
     if (selectedLocationId) {
@@ -163,7 +182,7 @@ const EmployeeTimeEntry = () => {
             data: {
               locationId: data.locationId,
               locationName: location?.name,
-              timeEntryId: timeEntryId // Now we have the correct timeEntryId
+              timeEntryId: timeEntryId
             }
           })
         ));
