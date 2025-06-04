@@ -50,6 +50,30 @@ export const getUserById = async (userId: string) => {
   }
 };
 
+export const getUsersByIds = async (userIds: string[]) => {
+  try {
+    // Return empty array if no IDs provided
+    if (!userIds.length) {
+      return [];
+    }
+
+    // Create a query to get all users where id is in the provided array
+    const q = query(
+      collection(db, 'users'),
+      where('__name__', 'in', userIds)
+    );
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as User[];
+  } catch (error) {
+    console.error('Error getting users by ids:', error);
+    throw new Error('Kunne ikke hente brukerdetaljer');
+  }
+};
+
 export const addEmployee = async (employeeData: { email: string; name: string; }) => {
   try {
     const userToAdd = {
