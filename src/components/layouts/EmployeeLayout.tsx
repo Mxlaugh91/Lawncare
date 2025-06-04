@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +68,7 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
         </div>
 
         <div className="flex items-center gap-4">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
