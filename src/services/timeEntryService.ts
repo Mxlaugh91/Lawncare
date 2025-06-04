@@ -10,7 +10,8 @@ import {
   Timestamp, 
   serverTimestamp,
   runTransaction,
-  limit
+  limit,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { TimeEntry } from '@/types';
@@ -19,6 +20,8 @@ import * as locationService from './locationService';
 
 export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'>) => {
   try {
+    let timeEntryId: string;
+
     await runTransaction(db, async (transaction) => {
       // First, perform all reads
       const locationRef = doc(db, 'locations', entryData.locationId);
@@ -45,8 +48,10 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
       const days = Math.floor((currentDate.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
       const currentWeek = Math.ceil(days / 7);
 
-      // Now perform all writes
+      // Create a new document reference
       const timeEntryRef = doc(collection(db, 'timeEntries'));
+      timeEntryId = timeEntryRef.id; // Store the ID
+
       const timeEntryData = {
         ...entryData,
         createdAt: serverTimestamp(),
@@ -72,6 +77,8 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
         });
       }
     });
+
+    return timeEntryId; // Return the ID after transaction completes
   } catch (error) {
     console.error('Error adding time entry:', error);
     throw new Error('Could not add time entry');

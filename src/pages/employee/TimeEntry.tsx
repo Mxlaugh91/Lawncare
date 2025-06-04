@@ -141,7 +141,7 @@ const EmployeeTimeEntry = () => {
     }
 
     try {
-      // Add the time entry
+      // Add the time entry and get the ID
       const timeEntryId = await timeEntryService.addTimeEntry({
         ...data,
         employeeId: currentUser.uid,
@@ -151,7 +151,7 @@ const EmployeeTimeEntry = () => {
       });
       
       // Create notifications for tagged employees
-      if (selectedEmployees.length > 0) {
+      if (selectedEmployees.length > 0 && timeEntryId) {
         const location = locations.find(loc => loc.id === data.locationId);
         
         await Promise.all(selectedEmployees.map(employeeId =>
@@ -163,7 +163,7 @@ const EmployeeTimeEntry = () => {
             data: {
               locationId: data.locationId,
               locationName: location?.name,
-              timeEntryId
+              timeEntryId: timeEntryId // Now we have the correct timeEntryId
             }
           })
         ));
