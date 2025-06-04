@@ -41,13 +41,13 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  Archive
+  Archive,
+  AlertCircle
 } from 'lucide-react';
-import { Location, TimeEntry } from '@/types';
+import { LocationWithStatus } from '@/types';
 import * as locationService from '@/services/locationService';
-import * as timeEntryService from '@/services/timeEntryService';
 import { useToast } from '@/hooks/use-toast';
-import { getISOWeekNumber, getISOWeekDates, getWeekday } from '@/lib/utils';
+import { getISOWeekNumber, getISOWeekDates } from '@/lib/utils';
 
 interface LocationWithStatus extends Location {
   isDueForMaintenanceInSelectedWeek: boolean;
@@ -102,55 +102,13 @@ const Operations = () => {
   const [selectedWeek, setSelectedWeek] = useState(getISOWeekNumber(new Date()));
   const [expandedLocationId, setExpandedLocationId] = useState<string | null>(null);
 
-  const shouldShowMaintenance = (location: Location, selectedWeek: number) => {
-    if (selectedWeek < location.startWeek) return false;
-    const weeksFromStart = selectedWeek - location.startWeek;
-    return weeksFromStart % location.maintenanceFrequency === 0;
-  };
-
-  const shouldShowEdgeCutting = (location: Location, selectedWeek: number) => {
-    if (selectedWeek < location.startWeek) return false;
-    const weeksFromStart = selectedWeek - location.startWeek;
-    return weeksFromStart % location.edgeCuttingFrequency === 0;
-  };
-
   useEffect(() => {
     const fetchLocations = async () => {
       try {
         setLoading(true);
-        const activeLocations = await locationService.getActiveLocations();
-        
-        const locationsWithTimeEntries = await Promise.all(
-          activeLocations.map(async (location) => {
-            // Get time entries specifically for the selected week
-            const timeEntries = await timeEntryService.getTimeEntriesForLocation(location.id, selectedWeek);
-            const lastTimeEntry = timeEntries.length > 0 ? timeEntries[0] : undefined;
-            
-            const isDueForMaintenanceInSelectedWeek = shouldShowMaintenance(location, selectedWeek);
-            const isDueForEdgeCuttingInSelectedWeek = shouldShowEdgeCutting(location, selectedWeek);
-            
-            // A location is only considered completed if it has time entries in the selected week
-            const isMaintenanceCompleted = timeEntries.length > 0;
-            const isEdgeCuttingCompleted = timeEntries.some(entry => entry.edgeCuttingDone);
-            
-            return {
-              ...location,
-              isDueForMaintenanceInSelectedWeek,
-              isDueForEdgeCuttingInSelectedWeek,
-              lastTimeEntry,
-              isMaintenanceCompleted,
-              isEdgeCuttingCompleted
-            };
-          })
-        );
-        
-        const filteredLocations = locationsWithTimeEntries.filter(location => 
-          location.isDueForMaintenanceInSelectedWeek || 
-          location.isDueForEdgeCuttingInSelectedWeek
-        );
-
-        setLocations(filteredLocations);
-        setFilteredLocations(filteredLocations);
+        const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(selectedWeek);
+        setLocations(locationsWithStatus);
+        setFilteredLocations(locationsWithStatus);
       } catch (error) {
         console.error('Error fetching locations:', error);
         toast({
@@ -189,29 +147,35 @@ const Operations = () => {
     if (!location.isDueForMaintenanceInSelectedWeek) {
       return "Ikke planlagt denne uken";
     }
-    return location.isMaintenanceCompleted ? (
-      <span className="text-green-600 font-medium">Fullført</span>
-    ) : (
-      <span className="text-amber-600">Planlagt denne uken</span>
-    );
+    switch (location.status) {
+      case 'fullfort':
+        return <span className="text-primary font-medium">Fullført</span>;
+      case 'ikke_utfort':
+        return <span className="text-destructive">Ikke utført</span>;
+      default:
+        return <span className="text-amber-600">Planlagt denne uken</span>;
+    }
   };
 
   const getEdgeCuttingStatus = (location: LocationWithStatus) => {
     if (!location.isDueForEdgeCuttingInSelectedWeek) {
       return "Ikke planlagt denne uken";
     }
-    return location.isEdgeCuttingCompleted ? (
-      <span className="text-green-600 font-medium">Fullført</span>
-    ) : (
-      <span className="text-amber-600">Planlagt denne uken</span>
-    );
+    switch (location.status) {
+      case 'fullfort':
+        return <span className="text-primary font-medium">Fullført</span>;
+      case 'ikke_utfort':
+        return <span className="text-destructive">Ikke utført</span>;
+      default:
+        return <span className="text-amber-600">Planlagt denne uken</span>;
+    }
   };
 
   const renderMobileLocationCard = (location: LocationWithStatus) => {
     const isExpanded = expandedLocationId === location.id;
 
     return (
-      <Card key={location.id} className="mb-4">
+      <Card key={location.id} className="mb-4 card-hover">
         <CardContent className="p-4">
           <div 
             className="flex items-center justify-between cursor-pointer"
@@ -242,26 +206,31 @@ const Operations = () => {
                 </div>
               </div>
 
-              {location.lastTimeEntry && (
+              {location.timeEntries && location.timeEntries.length > 0 && (
                 <>
                   <div>
                     <div className="text-sm font-medium">Sist utført</div>
                     <div className="text-sm">
-                      {getWeekday(location.lastTimeEntry.date.toDate())}
+                      {new Intl.DateTimeFormat('no-NO', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }).format(location.timeEntries[0].date.toDate())}
                     </div>
                   </div>
 
                   <div>
                     <div className="text-sm font-medium">Tidsbruk</div>
                     <div className="text-sm">
-                      {location.lastTimeEntry.hours} timer
+                      {location.timeEntries[0].hours} timer
                     </div>
                   </div>
 
                   <div>
                     <div className="text-sm font-medium">Utført av</div>
                     <div className="text-sm">
-                      {location.lastTimeEntry.employeeName || 'Ikke registrert'}
+                      {location.timeEntries[0].employeeName || 'Ikke registrert'}
                     </div>
                   </div>
                 </>
@@ -317,19 +286,27 @@ const Operations = () => {
                 {getEdgeCuttingStatus(location)}
               </TableCell>
               <TableCell className="hidden lg:table-cell">
-                {location.lastTimeEntry 
-                  ? getWeekday(location.lastTimeEntry.date.toDate())
+                {location.timeEntries && location.timeEntries.length > 0 
+                  ? new Intl.DateTimeFormat('no-NO', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }).format(location.timeEntries[0].date.toDate())
                   : 'Ikke registrert'
                 }
               </TableCell>
               <TableCell className="hidden lg:table-cell">
-                {location.lastTimeEntry 
-                  ? `${location.lastTimeEntry.hours} timer`
+                {location.timeEntries && location.timeEntries.length > 0 
+                  ? `${location.timeEntries[0].hours} timer`
                   : '-'
                 }
               </TableCell>
               <TableCell className="hidden lg:table-cell">
-                {location.lastTimeEntry?.employeeName || 'Ikke registrert'}
+                {location.timeEntries && location.timeEntries.length > 0 
+                  ? location.timeEntries[0].employeeName 
+                  : 'Ikke registrert'
+                }
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
@@ -394,7 +371,7 @@ const Operations = () => {
                 <AlertDialogCancel>Avbryt</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleArchiveAll}
-                  className="bg-red-500 hover:bg-red-600"
+                  className="bg-destructive hover:bg-destructive/90"
                 >
                   Arkiver alle
                 </AlertDialogAction>
@@ -449,7 +426,7 @@ const Operations = () => {
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 rounded-md" />
+                      <div className="h-16 bg-muted rounded-md" />
                     </div>
                   ))}
                 </div>
@@ -470,10 +447,10 @@ const Operations = () => {
             
             <TabsContent value="status">
               <div className="grid gap-4 md:grid-cols-3">
-                <Card>
+                <Card className="card-hover">
                   <CardContent className="p-6 flex flex-col items-center">
-                    <div className="rounded-full bg-green-100 p-3 mb-4">
-                      <CheckCircle2 className="h-8 w-8 text-green-700" />
+                    <div className="rounded-full bg-primary/10 p-3 mb-4">
+                      <CheckCircle2 className="h-8 w-8 text-primary" />
                     </div>
                     <div className="text-3xl font-bold">
                       {locations.filter(loc => loc.isDueForMaintenanceInSelectedWeek).length}
@@ -484,7 +461,7 @@ const Operations = () => {
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="card-hover">
                   <CardContent className="p-6 flex flex-col items-center">
                     <div className="rounded-full bg-amber-100 p-3 mb-4">
                       <Scissors className="h-8 w-8 text-amber-700" />
@@ -498,7 +475,7 @@ const Operations = () => {
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="card-hover">
                   <CardContent className="p-6 flex flex-col items-center">
                     <div className="rounded-full bg-blue-100 p-3 mb-4">
                       <MapPin className="h-8 w-8 text-blue-700" />
