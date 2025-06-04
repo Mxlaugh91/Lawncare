@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Location } from '@/types';
+import * as timeEntryService from './timeEntryService';
+import { getISOWeekNumber } from '@/lib/utils';
 
 export const addLocation = async (locationData: Omit<Location, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'>) => {
   try {
@@ -179,5 +181,47 @@ export const getLocationsDueForService = async () => {
   } catch (error) {
     console.error('Error getting locations due for service:', error);
     throw new Error('Kunne ikke hente steder som trenger vedlikehold');
+  }
+};
+
+export const getLocationsWithWeeklyStatus = async (weekNumber: number) => {
+  try {
+    // Get all active locations
+    const q = query(
+      collection(db, 'locations'),
+      where('isArchived', '==', false),
+      orderBy('name')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const locations = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Location[];
+
+    // Process each location to determine its weekly status
+    const locationsWithStatus = await Promise.all(locations.map(async location => {
+      // Check if maintenance is due this week
+      const isDueForMaintenanceInSelectedWeek = 
+        weekNumber >= location.startWeek && 
+        (weekNumber - location.startWeek) % location.maintenanceFrequency === 0;
+
+      // Get time entries for this location in the selected week
+      const timeEntries = await timeEntryService.getTimeEntriesForLocation(location.id, weekNumber);
+      
+      // Location is considered completed if there are any time entries for this week
+      const isMaintenanceCompletedInSelectedWeek = timeEntries.length > 0;
+
+      return {
+        ...location,
+        isDueForMaintenanceInSelectedWeek,
+        isMaintenanceCompletedInSelectedWeek
+      };
+    }));
+
+    return locationsWithStatus;
+  } catch (error) {
+    console.error('Error getting locations with weekly status:', error);
+    throw new Error('Could not get locations with weekly status');
   }
 };

@@ -9,6 +9,7 @@ import {
 import { db } from './firebase';
 import * as locationService from './locationService';
 import * as timeEntryService from './timeEntryService';
+import { getISOWeekNumber } from '@/lib/utils';
 
 export interface DashboardStats {
   remainingLocations: number;
@@ -20,11 +21,20 @@ export interface DashboardStats {
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   try {
-    // Get all active locations
-    const activeLocations = await locationService.getActiveLocations();
+    // Get current week number
+    const currentWeek = getISOWeekNumber(new Date());
     
-    // Get locations due for service
-    const dueLocations = await locationService.getLocationsDueForService();
+    // Get locations with their weekly status
+    const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
+    
+    // Calculate remaining and completed locations
+    const remainingLocations = locationsWithStatus.filter(
+      loc => loc.isDueForMaintenanceInSelectedWeek && !loc.isMaintenanceCompletedInSelectedWeek
+    ).length;
+
+    const completedThisWeek = locationsWithStatus.filter(
+      loc => loc.isDueForMaintenanceInSelectedWeek && loc.isMaintenanceCompletedInSelectedWeek
+    ).length;
     
     // Get weekly aggregated hours by employee
     const weeklyHours = await timeEntryService.getWeeklyAggregatedHoursByEmployee();
@@ -33,9 +43,9 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const recentEntries = await timeEntryService.getRecentTimeEntries(5);
     
     return {
-      remainingLocations: dueLocations.length,
-      completedThisWeek: recentEntries.length,
-      totalLocations: activeLocations.length,
+      remainingLocations,
+      completedThisWeek,
+      totalLocations: locationsWithStatus.length,
       activeEmployees: Object.keys(weeklyHours).length,
       recentActivity: recentEntries
     };
