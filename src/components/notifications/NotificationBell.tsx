@@ -11,11 +11,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import * as notificationService from '@/services/notificationService';
+import { TimeEntryDialog } from './TimeEntryDialog';
 
 export function NotificationBell() {
   const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -31,6 +33,14 @@ export function NotificationBell() {
 
     fetchNotifications();
   }, [currentUser]);
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (notification.type === 'job_tagged' && notification.data?.locationId && notification.data?.timeEntryId) {
+      setSelectedNotification(notification);
+    } else {
+      await handleMarkAsRead(notification.id);
+    }
+  };
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -52,6 +62,11 @@ export function NotificationBell() {
     }
   };
 
+  const handleCloseDialog = () => {
+    setSelectedNotification(null);
+    setIsOpen(false);
+  };
+
   const formatNotificationTime = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -66,57 +81,70 @@ export function NotificationBell() {
   };
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {notifications.length > 0 && (
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-              {notifications.length}
-            </span>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <div className="flex items-center justify-between px-4 py-2 border-b">
-          <span className="font-medium">Varsler</span>
-          {notifications.length > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              className="text-xs hover:text-primary"
-            >
-              Marker alle som lest
-            </Button>
-          )}
-        </div>
-        <ScrollArea className="h-[300px]">
-          {notifications.length === 0 ? (
-            <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
-              Ingen nye varsler
-            </div>
-          ) : (
-            notifications.map((notification) => (
-              <DropdownMenuItem
-                key={notification.id}
-                className="px-4 py-3 cursor-default focus:bg-muted"
-                onClick={() => handleMarkAsRead(notification.id)}
+    <>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            {notifications.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+                {notifications.length}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-80">
+          <div className="flex items-center justify-between px-4 py-2 border-b">
+            <span className="font-medium">Varsler</span>
+            {notifications.length > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                className="text-xs hover:text-primary"
               >
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{notification.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatNotificationTime(notification.createdAt.toDate())}
-                    </span>
+                Marker alle som lest
+              </Button>
+            )}
+          </div>
+          <ScrollArea className="h-[300px]">
+            {notifications.length === 0 ? (
+              <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
+                Ingen nye varsler
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <DropdownMenuItem
+                  key={notification.id}
+                  className="px-4 py-3 cursor-default focus:bg-muted"
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{notification.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatNotificationTime(notification.createdAt.toDate())}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{notification.message}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
-                </div>
-              </DropdownMenuItem>
-            ))
-          )}
-        </ScrollArea>
-      </DropdownMenuContent>
-    </DropdownMenu>
+                </DropdownMenuItem>
+              ))
+            )}
+          </ScrollArea>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {selectedNotification && selectedNotification.data && (
+        <TimeEntryDialog
+          isOpen={true}
+          onClose={handleCloseDialog}
+          notificationId={selectedNotification.id}
+          locationId={selectedNotification.data.locationId!}
+          locationName={selectedNotification.data.locationName!}
+          timeEntryId={selectedNotification.data.timeEntryId!}
+        />
+      )}
+    </>
   );
 }
