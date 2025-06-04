@@ -202,6 +202,15 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
 
     // Process each location to determine its weekly status
     const locationsWithStatus = await Promise.all(locations.map(async location => {
+      // Get time entries for this location in the selected week
+      const timeEntries = await timeEntryService.getTimeEntriesForLocation(location.id, weekNumber);
+      
+      // Get tagged employees if any
+      const taggedEmployeeIds = timeEntries.flatMap(entry => entry.taggedEmployeeIds || []);
+      const taggedEmployees = taggedEmployeeIds.length > 0 
+        ? await userService.getUsersByIds(taggedEmployeeIds)
+        : [];
+
       // Check if maintenance is due this week
       const isDueForMaintenanceInSelectedWeek = 
         weekNumber >= location.startWeek && 
@@ -215,15 +224,6 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
           taggedEmployees: []
         };
       }
-
-      // Get time entries for this location in the selected week
-      const timeEntries = await timeEntryService.getTimeEntriesForLocation(location.id, weekNumber);
-      
-      // Get tagged employees if any
-      const taggedEmployeeIds = timeEntries.flatMap(entry => entry.taggedEmployeeIds || []);
-      const taggedEmployees = taggedEmployeeIds.length > 0 
-        ? await userService.getUsersByIds(taggedEmployeeIds)
-        : [];
 
       // Determine status based on time entries and tagged employees
       let status: LocationStatus = 'planlagt';
