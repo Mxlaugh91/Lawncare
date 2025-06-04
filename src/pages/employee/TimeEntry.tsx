@@ -12,11 +12,13 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertCircle, Clock, Scissors, Calendar } from 'lucide-react';
-import { Location, Mower } from '@/types';
+import { AlertCircle, Clock, Scissors, Calendar, Users } from 'lucide-react';
+import { Location, Mower, User } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
+import * as userService from '@/services/userService';
+import * as notificationService from '@/services/notificationService';
 import { getISOWeekNumber, getISOWeekDates } from '@/lib/utils';
 
 const timeEntrySchema = z.object({
@@ -29,6 +31,7 @@ const timeEntrySchema = z.object({
   mowerId: z.string().nullable(),
   edgeCuttingDone: z.boolean().default(false),
   notes: z.string().optional(),
+  taggedEmployeeIds: z.array(z.string()).optional(),
 });
 
 type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
@@ -39,8 +42,10 @@ const EmployeeTimeEntry = () => {
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [mowers, setMowers] = useState<Mower[]>([]);
+  const [employees, setEmployees] = useState<User[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [edgeCuttingNeeded, setEdgeCuttingNeeded] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const currentWeek = getISOWeekNumber(new Date());
   const weekDates = getISOWeekDates(currentWeek);
 
@@ -59,6 +64,7 @@ const EmployeeTimeEntry = () => {
       mowerId: null,
       edgeCuttingDone: false,
       notes: '',
+      taggedEmployeeIds: [],
     },
   });
 
@@ -69,13 +75,15 @@ const EmployeeTimeEntry = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [locationData, mowerData] = await Promise.all([
+        const [locationData, mowerData, employeeData] = await Promise.all([
           locationService.getActiveLocations(),
-          equipmentService.getAllMowers()
+          equipmentService.getAllMowers(),
+          userService.getAllEmployees()
         ]);
         
         setLocations(locationData);
         setMowers(mowerData);
+        setEmployees(employeeData.filter(emp => emp.id !== currentUser?.uid));
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -89,7 +97,7 @@ const EmployeeTimeEntry = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, currentUser]);
 
   useEffect(() => {
     if (selectedLocationId) {
@@ -111,6 +119,17 @@ const EmployeeTimeEntry = () => {
     }
   }, [selectedLocationId, locations, currentWeek]);
 
+  const handleEmployeeSelect = (employeeId: string) => {
+    setSelectedEmployees(prev => {
+      const isSelected = prev.includes(employeeId);
+      if (isSelected) {
+        return prev.filter(id => id !== employeeId);
+      } else {
+        return [...prev, employeeId];
+      }
+    });
+  };
+
   const onSubmit = async (data: TimeEntryFormValues) => {
     if (!currentUser) {
       toast({
@@ -122,12 +141,33 @@ const EmployeeTimeEntry = () => {
     }
 
     try {
-      await timeEntryService.addTimeEntry({
+      // Add the time entry
+      const timeEntryId = await timeEntryService.addTimeEntry({
         ...data,
         employeeId: currentUser.uid,
         employeeName: currentUser.displayName || currentUser.email || 'Ukjent',
         date: new Date(),
+        taggedEmployeeIds: selectedEmployees,
       });
+      
+      // Create notifications for tagged employees
+      if (selectedEmployees.length > 0) {
+        const location = locations.find(loc => loc.id === data.locationId);
+        
+        await Promise.all(selectedEmployees.map(employeeId =>
+          notificationService.addNotification({
+            userId: employeeId,
+            title: 'Du har blitt tagget i en jobb',
+            message: `Du har blitt tagget i en jobb på ${location?.name}`,
+            type: 'job_tagged',
+            data: {
+              locationId: data.locationId,
+              locationName: location?.name,
+              timeEntryId
+            }
+          })
+        ));
+      }
       
       toast({
         title: 'Timeregistrering lagret',
@@ -135,6 +175,7 @@ const EmployeeTimeEntry = () => {
       });
       
       reset();
+      setSelectedEmployees([]);
     } catch (error) {
       console.error('Error submitting time entry:', error);
       toast({
@@ -183,7 +224,7 @@ const EmployeeTimeEntry = () => {
                   </SelectContent>
                 </Select>
                 {errors.locationId && (
-                  <p className="text-sm text-red-500 mt-1">{errors.locationId.message}</p>
+                  <p className="text-sm text-destructive mt-1">{errors.locationId.message}</p>
                 )}
               </div>
 
@@ -216,7 +257,7 @@ const EmployeeTimeEntry = () => {
                     {...register('hours')}
                   />
                   {errors.hours && (
-                    <p className="text-sm text-red-500 mt-1">{errors.hours.message}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.hours.message}</p>
                   )}
                 </div>
                 
@@ -258,6 +299,33 @@ const EmployeeTimeEntry = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <Label className="flex items-center mb-2">
+                  <Users className="mr-2 h-4 w-4" />
+                  Andre medarbeidere på jobb
+                </Label>
+                <ScrollArea className="h-32 rounded-md border">
+                  <div className="p-2 space-y-1">
+                    {employees.map((employee) => (
+                      <div
+                        key={employee.id}
+                        className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${
+                          selectedEmployees.includes(employee.id)
+                            ? 'bg-primary/10 text-primary'
+                            : 'hover:bg-muted'
+                        }`}
+                        onClick={() => handleEmployeeSelect(employee.id)}
+                      >
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                          {employee.name.charAt(0)}
+                        </div>
+                        <span className="text-sm font-medium">{employee.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
 
               <div>
