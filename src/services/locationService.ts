@@ -157,31 +157,29 @@ export const deleteAllLocations = async () => {
 
 export const getLocationsDueForService = async () => {
   try {
-    const q = query(
-      collection(db, 'locations'),
-      where('isArchived', '==', false),
-      orderBy('name')
-    );
+    const currentWeek = getISOWeekNumber(new Date());
+    const locationsWithStatus = await getLocationsWithWeeklyStatus(currentWeek);
     
-    const querySnapshot = await getDocs(q);
-    
-    const now = new Date();
-    const currentWeek = getISOWeekNumber(now);
-    
-    return querySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }) as Location)
-      .filter(location => {
-        const lastMaintenanceWeek = location.lastMaintenanceWeek || 0;
-        const frequency = location.maintenanceFrequency || 2;
-        
-        return (currentWeek - lastMaintenanceWeek) >= frequency;
-      });
+    // Only return locations that need service (not completed)
+    return locationsWithStatus
+      .filter(location => location.status !== 'fullfort')
+      .map(location => ({
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        maintenanceFrequency: location.maintenanceFrequency,
+        edgeCuttingFrequency: location.edgeCuttingFrequency,
+        startWeek: location.startWeek,
+        notes: location.notes,
+        isArchived: location.isArchived,
+        lastMaintenanceWeek: location.lastMaintenanceWeek,
+        lastEdgeCuttingWeek: location.lastEdgeCuttingWeek,
+        createdAt: location.createdAt,
+        updatedAt: location.updatedAt
+      } as Location));
   } catch (error) {
     console.error('Error getting locations due for service:', error);
-    throw new Error('Kunne ikke hente steder som trenger vedlikehold');
+    throw new Error('Could not get locations due for service');
   }
 };
 
@@ -221,16 +219,9 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
         weekNumber >= location.startWeek && 
         (weekNumber - location.startWeek) % location.edgeCuttingFrequency === 0;
 
-      // If neither maintenance nor edge cutting is due, return early
+      // If neither maintenance nor edge cutting is due, skip this location
       if (!isDueForMaintenanceInSelectedWeek && !isDueForEdgeCuttingInSelectedWeek) {
-        return {
-          ...location,
-          status: 'planlagt' as LocationStatus,
-          isDueForMaintenanceInSelectedWeek,
-          isDueForEdgeCuttingInSelectedWeek,
-          timeEntries: [],
-          taggedEmployees: []
-        };
+        return null;
       }
 
       // Determine status based on time entries and tagged employees
@@ -260,7 +251,10 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
       };
     }));
 
-    return locationsWithStatus;
+    // Filter out null values and return only locations that need service
+    return locationsWithStatus.filter((loc): loc is LocationWithStatus => 
+      loc !== null && loc.status !== 'fullfort'
+    );
   } catch (error) {
     console.error('Error getting locations with weekly status:', error);
     throw new Error('Could not get locations with weekly status');
