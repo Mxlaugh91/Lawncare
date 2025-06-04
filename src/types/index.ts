@@ -26,7 +26,9 @@ export interface Location {
 export interface TimeEntry {
   id: string;
   locationId: string;
+  locationName?: string;
   employeeId: string;
+  employeeName?: string;
   date: Timestamp;
   hours: number;
   edgeCuttingDone: boolean;
@@ -84,6 +86,20 @@ export interface Notification {
   message: string;
   read: boolean;
   createdAt: Timestamp;
-  type: 'mower_service' | 'time_entry_tag' | 'general';
-  data?: Record<string, any>;
+  type: 'job_tagged' | 'service_needed' | 'general';
+  data?: {
+    locationId?: string;
+    locationName?: string;
+    timeEntryId?: string;
+    mowerId?: string;
+    mowerName?: string;
+  };
+}
+
+export type LocationStatus = 'pending' | 'waiting' | 'completed';
+
+export interface LocationWithStatus extends Location {
+  status: LocationStatus;
+  timeEntries?: TimeEntry[];
+  taggedEmployees?: User[];
 }
