@@ -1,0 +1,208 @@
+# Prosjektbeskrivelse: Bedriftsintern Applikasjon for Vedlikeholdsstyring
+
+## 1. Hovedformål
+
+Systemets hovedformål er å tilby en digital løsning for administrasjon av vedlikeholdsoppdrag (primært gressklipping og kantklipping) for ulike steder. Det skal også inkludere funksjonalitet for å administrere og spore vedlikehold på selskapets gressklippere. Applikasjonen skal effektivisere arbeidsflyten for både administratorer og ansatte i felt.
+
+## 2. Teknologistabel (Referanse)
+
+* **Frontend:** React, TypeScript, Vite
+* **Styling:** Tailwind CSS
+* **UI Komponenter:** shadcn/ui, Radix UI (primitive komponenter)
+* **Ikoner:** Lucide React
+* **Ruting:** React Router
+* **Backend/Database:** Firebase (Firestore, Firebase Authentication)
+
+## 3. Mappestruktur (Forslag)
+
+Dette er et forslag til en organisert mappestruktur for prosjektet:
+
+/prosjekt-rot
+|
+|-- public/                     # Statiske filer som serveres direkte (favicons, etc.)
+|   |-- vite.svg
+|
+|-- src/                        # Hovedkildekoden for applikasjonen
+|   |
+|   |-- assets/                 # Statiske ressurser (bilder, ikoner, globale stiler)
+|   |-- components/             # Gjenbrukbare React-komponenter
+|   |   |-- ui/                 # Basis UI-komponenter (fra shadcn/ui, egne)
+|   |   |-- common/             # Generelle, sammensatte komponenter (Navbar, Modal)
+|   |   |-- features/           # Funksjonsspesifikke komponenter
+|   |
+|   |-- pages/                  # Hovedside-komponenter, koblet til ruter
+|   |   |-- admin/              # Sider for Admin-rollen
+|   |   |-- employee/           # Sider for Ansatt-rollen
+|   |   |-- auth/               # Sider for autentisering (Login)
+|   |   |-- NotFoundPage.tsx
+|   |
+|   |-- routes/                 # Konfigurasjon av ruting (React Router)
+|   |   |-- AppRoutes.tsx
+|   |   |-- ProtectedRoute.tsx
+|   |
+|   |-- services/               # Logikk for kommunikasjon med Firebase
+|   |   |-- firebaseConfig.ts
+|   |   |-- authService.ts
+|   |   |-- locationService.ts
+|   |   |-- timeEntryService.ts
+|   |   |-- equipmentService.ts
+|   |   |-- adminService.ts
+|   |
+|   |-- hooks/                  # Egendefinerte React Hooks
+|   |-- store/                  # Tilstandshåndtering (hvis brukt, f.eks. Zustand)
+|   |-- types/                  # TypeScript type-definisjoner og interfaces
+|   |-- utils/                  # Hjelpefunksjoner og konstanter
+|   |
+|   |-- App.tsx                 # Hovedapplikasjonskomponent
+|   |-- main.tsx                # Inngangspunkt for applikasjonen
+|   |-- vite-env.d.ts
+|
+|-- .env                        # Miljøvariabler
+|-- .env.example
+|-- .eslintrc.cjs
+|-- .gitignore
+|-- index.html                  # Vite inngangspunkt HTML-fil
+|-- package.json
+|-- tsconfig.json
+|-- tsconfig.node.json
+|-- vite.config.ts
+
+## 4. Oversikt over Sentrale Funksjoner (Konseptuelt)
+
+Dette er en oversikt over hovedtypene av funksjoner og sentrale funksjoner innenfor hver tjenestemodul (primært i `src/services/`).
+
+### 4.1. Autentisering (`src/services/authService.ts`)
+* `loginWithEmailAndPassword(email, password)`: Logger inn bruker.
+* `logoutUser()`: Logger ut aktiv bruker.
+* `onAuthStateChanged(callback)`: Lytter på endringer i innloggingsstatus.
+* `createUserAccount(email, password, name)`: Oppretter ny ansatt-bruker (via Admin).
+* `getCurrentUser()`: Henter info om innlogget bruker.
+
+### 4.2. Stedsadministrasjon (`src/services/locationService.ts`)
+* `addLocation(locationData)`: Legger til nytt sted.
+* `getActiveLocations()`: Henter alle aktive steder.
+* `getArchivedLocations()`: Henter arkiverte steder.
+* `getLocationById(locationId)`: Henter detaljer for ett sted.
+* `updateLocation(locationId, updatedData)`: Oppdaterer et sted.
+* `archiveLocation(locationId)`: Arkiverer et sted.
+* `getLocationsDueForService(employeeId)`: Henter "Gjenstår"-steder for ansatt/alle.
+
+### 4.3. Timeregistrering (`src/services/timeEntryService.ts`)
+* `addTimeEntry(entryData)`: Logger ny timeregistrering (inkl. tid, kanting, valgt klipper).
+* `getTimeEntriesForLocation(locationId)`: Henter timeregistreringer for et sted.
+* `getTimeEntriesForEmployee(employeeId, period)`: Henter timeregistreringer for en ansatt.
+* `getWeeklyAggregatedHoursByEmployee()`: Henter data for Admin Dashboard.
+* `tagEmployeeForTimeEntry(originalEntryId, taggedEmployeeId)`: Kobler annen ansatt til jobb.
+* `getPendingTimeEntriesForEmployee(employeeId)`: Henter jobber ansatt er tagget på.
+
+### 4.4. Utstyrsvedlikehold (`src/services/equipmentService.ts`)
+* `addMower(mowerData)`: Legger til ny gressklipper (inkl. serviceintervaller).
+* `getAllMowers()`: Henter alle gressklippere.
+* `getMowerById(mowerId)`: Henter detaljer for én klipper.
+* `updateMowerDetails(mowerId, updatedData)`: Oppdaterer klipperinfo/serviceintervaller.
+* `logMowerUsage(mowerId, hoursUsed)`: Oppdaterer klipperens kjøretid (kalles etter timeregistrering).
+* `getMowersNeedingService()`: Henter klippere som trenger service.
+* `resetServiceInterval(mowerId, serviceIntervalId, userId)`: Nullstiller et serviceintervall, logger hvem som gjorde det.
+
+### 4.5. Generelle Admin-funksjoner (`src/services/adminService.ts`)
+* `getSeasonSettings()`: Henter sesonginnstillinger.
+* `updateSeasonSettings(settings)`: Oppdaterer sesonginnstillinger.
+* `getDefaultFrequencySetting()`: Henter standard frekvens.
+* `updateDefaultFrequencySetting(frequency)`: Oppdaterer standard frekvens.
+* `getDashboardStats()`: Henter nøkkeltall for Admin Dashboard.
+
+### 4.6. Funksjoner i React Komponenter (`src/pages/` og `src/components/`)
+* **Skjemahåndtering:** Validering av input, håndtering av `onChange` og `onSubmit`.
+* **Tilstandshåndtering:** Bruk av `useState`, `useEffect`, og eventuelt global state (f.eks. Zustand).
+* **Datavisning:** Mapping over data for å rendre UI-elementer (lister, tabeller, kort).
+* **Event Handlers:** Funksjoner som kjører ved brukerinteraksjoner (klikk, valg).
+* **Kall til service-funksjoner:** Komponenter kaller på funksjonene definert i `src/services/`.
+* **Navigasjon:** Bruk av React Router for å bytte mellom sider.
+
+### 4.7. Firebase Interaksjoner (primært logikk innenfor `src/services/`)
+* **Firestore (Database):**
+    * Operasjoner som `addDoc()`, `getDoc()`, `getDocs()`, `updateDoc()`, `deleteDoc()` (eller statusendring for arkivering), `query()`, `where()`, og `onSnapshot()` (for sanntidsoppdateringer).
+* **Firebase Authentication:**
+    * Bruk av Firebase Auth SDK-metoder for innlogging, brukerregistrering, statusendringer, etc.
+* **Firebase Storage (potensielt for fremtidig bruk):**
+    * For lagring av filer som bilder (ikke et krav per nå).
+
+## 5. Rolledefinisjoner og Funksjonalitet (Detaljert Sammendrag V1)
+
+Dette er en detaljert gjennomgang av funksjonaliteten for hver rolle, basert på alle diskusjoner.
+
+### 5.1. Administrator-rollen (Admin)
+
+Administratorer har full tilgang til å konfigurere og administrere alle aspekter av systemet.
+
+#### 5.1.1. Admin - "Oversikt" (Dashboard)
+* **Hovedformål:** Gi en umiddelbar statusoppdatering og tilgang til nøkkelinformasjon.
+* **Nøkkelinnhold:**
+    * **Nøkkeltall:**
+        * Antall steder som "Gjenstår" (ikke fullført).
+        * Antall ansatte som har registrert timer inneværende uke.
+        * Totalt antall aktive steder i systemet.
+        * Antall steder "fullført denne uken".
+    * **Nylig Aktivitet (Feed):**
+        * Viser de siste X (f.eks. 3-5) nylig fullførte jobbene (med Sted, Ansatt, Dato/Tidspunkt).
+    * **Snarveier:**
+        * Tilgang til f.eks. "Drift", "Legg til nytt sted".
+
+#### 5.1.2. Admin - "Drift" (Operasjonell hovedside)
+* **Hovedformål:** Detaljert oversikt, statussporing og administrasjon av alle aktive vedlikeholdssteder.
+* **Nøkkelinnhold/Funksjoner:**
+    * Liste over alle aktive steder med følgende informasjon per sted:
+        * Navn/ID på stedet.
+        * Adresse.
+        * **Hovedvedlikehold:** Status ("Gjenstår", "Fullført", "Venter på ansatt"), Siste utførte uke, Neste forventede uke.
+        * **Kantklipping:** Siste utførte uke, Neste forventede uke (basert på egen, uavhengig frekvens).
+        * Logget tidsbruk for siste jobb.
+        * Hvilken/hvilke ansatte som utførte siste jobb.
+        * Tilgang til stedets notater/instrukser.
+    * **Handlinger:** Filtrere listen, Arkivere et sted, Redigere detaljer for et sted.
+
+#### 5.1.3. Admin - Legge til / Redigere Sted
+* **Hovedformål:** Registrere nye vedlikeholdssteder eller oppdatere informasjon for eksisterende.
+* **Felter som registreres:** Navn/ID, Adresse, Frekvens hovedvedlikehold, Frekvens kantklipping, Oppstartsuke, Notater/Instrukser.
+
+#### 5.1.4. Admin - "Administrasjon" (Systeminnstillinger)
+* **Hovedformål:** Konfigurere globale systeminnstillinger.
+* **Nøkkelinnhold/Funksjoner:** Definere sesongens varighet (start-/sluttuke), Sette standard frekvens for hovedvedlikehold.
+
+#### 5.1.5. Admin - "Ansatte" (Brukeradministrasjon)
+* **Hovedformål:** Administrere ansatt-brukere.
+* **Nøkkelinnhold/Funksjoner:** Legge til ny ansatt (Navn, E-post), Se liste over ansatte. *(Endringer/sletting håndteres i Firebase-konsollen).*
+
+#### 5.1.6. Admin - "Arkivet"
+* **Hovedformål:** Vise historikk for inaktive steder.
+* **Nøkkelinnhold/Funksjoner:** Liste over arkiverte steder, visning av all historisk data per sted.
+
+#### 5.1.7. Admin - "Vedlikehold" (Utstyrsadministrasjon - Gressklippere)
+* **Hovedformål:** Registrere og spore vedlikehold for gressklippere.
+* **Legge til / Redigere Gressklipper:** Navn/Type, Unik ID, Kjøretid (starter på 0, akkumuleres), Definere Serviceintervaller (beskrivelse, timeintervall).
+* **Oversikt / Administrasjon av Klippere:** Liste over klippere, visning av akkumulert kjøretid, Varsler/status for servicebehov.
+* **Handlinger:** Admin kan nullstille serviceintervall (med bekreftelse), Se når et intervall sist ble nullstilt og av hvem (Admin/Ansatt).
+
+### 5.2. Ansatt-rollen (Medarbeider)
+
+Ansatte bruker systemet for å se oppgaver, registrere arbeid, og følge med på utstyrsvedlikehold.
+
+#### 5.2.1. Ansatt - "Oversikt" (Dashboard)
+* **Hovedformål:** Rask oversikt over arbeidsoppgaver og varsler.
+* **Nøkkelinnhold/Funksjoner:**
+    * Liste over steder som "Gjenstår" for den ansatte.
+    * **Servicevarsler for gressklippere:** Konsise meldinger (f.eks. "Klipper X - Service Y trengs").
+    * **Handlinger:** Ansatt kan nullstille et spesifikt serviceintervall for en klipper (med valg av servicepunkt og bekreftelsesdialog).
+    * Generelt varslingsikon for andre handlinger (f.eks. timer å fylle etter tagging).
+
+#### 5.2.2. Ansatt - "Timeregistrering"
+* **Hovedformål:** Logge utført arbeid, tidsbruk og utstyrsbruk.
+* **Felter/Handlinger:** Velg sted, Se notater, Valgfritt valg av én gressklipper brukt (timer akkumuleres til klipper), Kantklipping (Ja/Nei, med info om forventet), Tidsbruk, Marker jobb som "Fullført", Velg medarbeidere ved flere på jobb (varsler dem).
+
+#### 5.2.3. Ansatt - "Min historikk"
+* **Hovedformål:** Innsikt i eget utført arbeid og statistikk.
+* **Nøkkelinnhold/Funksjoner:** Statistikk (timer per periode, antall steder, snitt tid), Logg over tidligere timeregistreringer.
+
+---
+
+Dette dokumentet gir en høynivå oversikt over prosjektets formål, struktur og funksjonalitet. Den detaljerte logikken for hver funksjon og komponent vil bli utviklet under implementasjonsfasen.
