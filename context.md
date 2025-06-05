@@ -2,25 +2,35 @@
 
 ## Project Overview
 
-This is a maintenance management application built with React, TypeScript, and Firebase. It helps companies manage maintenance tasks, equipment, and employee time tracking.
+This is a maintenance management application built with React, TypeScript, and Firebase. It helps companies manage lawn maintenance tasks, equipment tracking, and employee time registration.
 
 ## Key Technologies
 
 - Frontend: React + TypeScript + Vite
 - State Management: Zustand
-- UI Components: shadcn/ui
+- UI Components: shadcn/ui + Radix UI
 - Database: Firebase (Firestore)
 - Authentication: Firebase Auth
 - Styling: Tailwind CSS
+- Icons: Lucide React
+- Forms: React Hook Form + Zod
+- Routing: React Router
 
 ## Directory Structure
 
 ```
 src/
 ├── components/     # UI Components
+│   ├── layouts/   # Layout components
+│   ├── ui/        # shadcn/ui components
+│   └── notifications/ # Notification components
 ├── contexts/      # React Context providers
 ├── hooks/         # Custom React hooks
+├── lib/           # Utility functions
 ├── pages/         # Page components
+│   ├── admin/     # Admin pages
+│   ├── employee/  # Employee pages
+│   └── auth/      # Authentication pages
 ├── routes/        # Routing logic
 ├── services/      # Firebase service layer
 ├── store/         # Zustand state management
@@ -29,134 +39,292 @@ src/
 
 ## State Management (Zustand Stores)
 
-All stores are located in `src/store/`:
-
 ### locationStore.ts
-- Manages location data with real-time updates
-- Handles CRUD operations with optimistic updates
-- Provides location filtering and status tracking
+```typescript
+interface LocationState {
+  locations: Location[];
+  loading: boolean;
+  error: string | null;
+  
+  // Real-time updates
+  initRealtimeUpdates: () => void;
+  cleanup: () => void;
+  
+  // CRUD operations
+  fetchLocations: () => Promise<void>;
+  addLocation: (data: LocationData) => Promise<string>;
+  updateLocation: (id: string, data: Partial<Location>) => Promise<void>;
+  archiveLocation: (id: string) => Promise<void>;
+  restoreLocation: (id: string) => Promise<void>;
+  
+  // Status tracking
+  getLocationsDueForService: () => Promise<Location[]>;
+  getLocationsWithWeeklyStatus: (week: number) => Promise<LocationWithStatus[]>;
+  
+  // Selectors
+  getActiveLocations: () => Location[];
+  getArchivedLocations: () => Location[];
+}
+```
 
-### equipmentStore.ts  
-- Manages equipment (mowers) data
-- Handles service intervals and maintenance tracking
-- Provides equipment status and filtering
+### equipmentStore.ts
+```typescript
+interface EquipmentState {
+  mowers: Mower[];
+  loading: boolean;
+  error: string | null;
+  
+  // CRUD operations
+  fetchMowers: () => Promise<void>;
+  addMower: (data: MowerData) => Promise<string>;
+  updateMowerDetails: (id: string, data: Partial<Mower>) => Promise<void>;
+  deleteMower: (id: string) => Promise<void>;
+  
+  // Service tracking
+  logMowerUsage: (id: string, hours: number) => Promise<void>;
+  resetServiceInterval: (mowerId: string, intervalId: string, userId: string) => Promise<void>;
+  addServiceInterval: (mowerId: string, data: ServiceIntervalData) => Promise<void>;
+  deleteServiceInterval: (mowerId: string, intervalId: string) => Promise<void>;
+  
+  // Selectors
+  getMowersNeedingService: () => Mower[];
+}
+```
 
 ### timeEntryStore.ts
-- Manages time entries and work logs
-- Handles employee time tracking
-- Provides aggregated reports and statistics
+```typescript
+interface TimeEntryState {
+  timeEntries: TimeEntry[];
+  loading: boolean;
+  error: string | null;
+  
+  // Time entry operations
+  addTimeEntry: (data: TimeEntryData) => Promise<string>;
+  getTimeEntriesForLocation: (locationId: string, week?: number) => Promise<TimeEntry[]>;
+  getTimeEntriesForEmployee: (employeeId: string, start?: Date, end?: Date) => Promise<TimeEntry[]>;
+  
+  // Reports and aggregation
+  getWeeklyAggregatedHoursByEmployee: () => Promise<Record<string, number>>;
+  getRecentTimeEntries: (count?: number) => Promise<TimeEntry[]>;
+  
+  // Employee tagging
+  tagEmployeeForTimeEntry: (entryId: string, employeeId: string) => Promise<void>;
+  getPendingTimeEntriesForEmployee: (employeeId: string) => Promise<TimeEntry[]>;
+}
+```
 
 ### userStore.ts
-- Manages user data and roles
-- Handles employee management
-- Provides user filtering and lookup
+```typescript
+interface UserState {
+  users: User[];
+  loading: boolean;
+  error: string | null;
+  
+  // User operations
+  fetchUsers: () => Promise<void>;
+  addEmployee: (data: EmployeeData) => Promise<string>;
+  getUserById: (id: string) => Promise<User | null>;
+  getUsersByIds: (ids: string[]) => Promise<User[]>;
+  
+  // Selectors
+  getEmployees: () => User[];
+  getAdmins: () => User[];
+}
+```
 
 ### notificationStore.ts
-- Manages notifications
-- Handles read/unread status
-- Provides notification filtering
+```typescript
+interface NotificationState {
+  notifications: Notification[];
+  loading: boolean;
+  error: string | null;
+  
+  // Notification operations
+  fetchUnreadNotifications: (userId: string) => Promise<void>;
+  addNotification: (data: NotificationData) => Promise<string>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: (userId: string) => Promise<void>;
+}
+```
 
 ### settingsStore.ts
-- Manages system settings
-- Handles season configuration
-- Provides global settings access
+```typescript
+interface SettingsState {
+  seasonSettings: SeasonSettings | null;
+  loading: boolean;
+  error: string | null;
+  
+  // Settings operations
+  fetchSeasonSettings: () => Promise<void>;
+  updateSeasonSettings: (settings: Partial<SeasonSettings>) => Promise<void>;
+}
+```
 
 ## Firebase Services
 
-Located in `src/services/`:
-
-### firebase.ts
-- Firebase initialization and configuration
-- Core Firebase service exports
-
 ### locationService.ts
-- Location CRUD operations
-- Location status management
-- Weekly maintenance tracking
+- Location CRUD operations with transaction support
+- Real-time location status updates
+- Weekly maintenance status calculation
+- Location archiving with automatic cleanup
 
-### equipmentService.ts  
-- Equipment CRUD operations
-- Service interval management
-- Usage tracking
+### equipmentService.ts
+- Equipment management with usage tracking
+- Service interval management with history
+- Maintenance logging with user attribution
+- Equipment deletion with related data cleanup
 
 ### timeEntryService.ts
-- Time entry creation
-- Work log management  
-- Report generation
+- Time entry creation with transaction support
+- Work completion tracking
+- Multi-employee job coordination
+- Aggregated time reports
 
 ### userService.ts
-- User management
-- Role-based access control
-- User lookup services
+- User management and role assignment
+- Employee data management
+- Bulk user operations
+- User lookup and filtering
 
 ### notificationService.ts
-- Notification creation
-- Read status management
-- Notification queries
+- Real-time notification delivery
+- Read status tracking
+- Notification querying and filtering
+- Bulk notification operations
 
 ### seasonSettingsService.ts
-- Season configuration
-- Global settings management
+- Season configuration management
+- Global settings coordination
+- Year-based settings versioning
 
 ## Authentication & Authorization
 
-Handled by `src/contexts/AuthContext.tsx`:
-- User authentication state
+### AuthContext (contexts/AuthContext.tsx)
+```typescript
+interface AuthContextType {
+  currentUser: User | null;
+  isAdmin: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+}
+```
+
+Features:
+- Email/password authentication
 - Role-based access control
 - Protected route handling
+- Real-time auth state monitoring
 
 ## Key Features
 
 ### Location Management
-- Add/edit/archive locations
-- Track maintenance status
-- Weekly scheduling
+- Add/edit locations with validation
+- Track maintenance schedules
+- Monitor completion status
+- Archive inactive locations
+- Real-time status updates
 
-### Equipment Management  
-- Track equipment usage
-- Service interval monitoring
-- Maintenance logging
+### Equipment Management
+- Track equipment usage hours
+- Monitor service intervals
+- Log maintenance history
+- Service notifications
+- Usage reporting
 
 ### Time Tracking
-- Employee time entries
-- Work completion tracking
-- Multi-employee job tagging
+- Employee time registration
+- Multi-employee job coordination
+- Work completion verification
+- Time aggregation reports
+- Historical time logs
 
-### Reporting
-- Weekly status reports
-- Equipment maintenance reports
-- Employee time summaries
-
-## Real-time Updates
-
-Implemented using Firebase onSnapshot:
-- Location status updates
-- Equipment status changes
-- New time entries
-- Notification delivery
-
-## Optimistic Updates
-
-Implemented in store actions:
-- Immediate UI updates
-- Background sync with Firebase
-- Automatic rollback on errors
+### Notification System
+- Real-time notifications
+- Job tagging notifications
+- Service due alerts
+- Read status tracking
+- Bulk operations
 
 ## Error Handling
 
-Consistent error handling pattern:
-- Try/catch blocks in services
-- Error state in stores
-- User-friendly error messages
+### Transaction Support
+- Atomic operations for related updates
+- Automatic rollback on failure
+- Data consistency guarantees
+- Error state management
+
+### Optimistic Updates
+- Immediate UI feedback
+- Background synchronization
 - Automatic state rollback
+- Loading state handling
 
 ## Type Safety
 
-Strong TypeScript typing:
-- Shared type definitions in `src/types/`
-- Type-safe store actions
-- Typed service layer
-- Component prop types
+### Core Types (types/index.ts)
+```typescript
+interface Location {
+  id: string;
+  name: string;
+  address: string;
+  maintenanceFrequency: number;
+  edgeCuttingFrequency: number;
+  startWeek: number;
+  notes: string;
+  lastMaintenanceWeek?: number;
+  lastEdgeCuttingWeek?: number;
+  isArchived: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+interface TimeEntry {
+  id: string;
+  locationId: string;
+  employeeId: string;
+  date: Timestamp;
+  hours: number;
+  edgeCuttingDone: boolean;
+  mowerId?: string;
+  notes?: string;
+  taggedEmployeeIds?: string[];
+  createdAt: Timestamp;
+}
+
+interface Mower {
+  id: string;
+  name: string;
+  model: string;
+  serialNumber: string;
+  totalHours: number;
+  serviceIntervals?: ServiceInterval[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'employee';
+  createdAt: Timestamp;
+}
+```
+
+## Utility Functions (lib/utils.ts)
+
+### Date Utilities
+```typescript
+getISOWeekNumber(date: Date): number
+getISOWeekDates(weekNumber: number): { start: Date; end: Date }
+formatDateToShortLocale(date: Date): string
+```
+
+### Styling Utilities
+```typescript
+cn(...inputs: ClassValue[]): string  // Tailwind class merging
+```
 
 ## File Locations Quick Reference
 
@@ -164,6 +332,7 @@ Strong TypeScript typing:
 - Firebase config: `src/services/firebase.ts`
 - Routes: `src/routes/AppRoutes.tsx`
 - Types: `src/types/index.ts`
+- Utils: `src/lib/utils.ts`
 
 ### State Management
 - Stores: `src/store/`
@@ -176,4 +345,4 @@ Strong TypeScript typing:
 
 ### Business Logic
 - Services: `src/services/`
-- Utilities: `src/lib/utils.ts`
+- Hooks: `src/hooks/`
