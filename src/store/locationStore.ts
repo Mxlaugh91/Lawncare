@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 import { Location, LocationWithStatus } from '@/types';
 import * as locationService from '@/services/locationService';
 
@@ -6,8 +8,11 @@ interface LocationState {
   locations: Location[];
   loading: boolean;
   error: string | null;
+  unsubscribe: (() => void) | null;
   
   // Actions
+  initRealtimeUpdates: () => void;
+  cleanup: () => void;
   fetchLocations: () => Promise<void>;
   addLocation: (locationData: Omit<Location, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'>) => Promise<string>;
   updateLocation: (locationId: string, updatedData: Partial<Location>) => Promise<void>;
@@ -25,6 +30,40 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   locations: [],
   loading: false,
   error: null,
+  unsubscribe: null,
+
+  initRealtimeUpdates: () => {
+    // Clean up any existing subscription
+    get().cleanup();
+
+    // Set up real-time listener for locations
+    const q = query(
+      collection(db, 'locations'),
+      orderBy('name')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const locations = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Location[];
+      
+      set({ locations });
+    }, (error) => {
+      set({ error: 'Failed to listen to location updates' });
+      console.error('Location listener error:', error);
+    });
+
+    set({ unsubscribe });
+  },
+
+  cleanup: () => {
+    const { unsubscribe } = get();
+    if (unsubscribe) {
+      unsubscribe();
+      set({ unsubscribe: null });
+    }
+  },
 
   fetchLocations: async () => {
     try {
@@ -40,45 +79,102 @@ export const useLocationStore = create<LocationState>((set, get) => ({
 
   addLocation: async (locationData) => {
     try {
-      set({ loading: true, error: null });
+      // Optimistically add the location
+      const optimisticLocation: Location = {
+        id: 'temp-' + Date.now(),
+        ...locationData,
+        isArchived: false,
+        createdAt: new Date() as any,
+        updatedAt: new Date() as any,
+      };
+
+      set(state => ({
+        locations: [...state.locations, optimisticLocation]
+      }));
+
+      // Actually add the location
       const locationId = await locationService.addLocation(locationData);
-      await get().fetchLocations(); // Refresh the locations list
       return locationId;
     } catch (error) {
-      set({ error: 'Failed to add location', loading: false });
+      // Revert optimistic update on error
+      set(state => ({
+        locations: state.locations.filter(loc => loc.id !== 'temp-' + Date.now()),
+        error: 'Failed to add location'
+      }));
       throw error;
     }
   },
 
   updateLocation: async (locationId, updatedData) => {
     try {
-      set({ loading: true, error: null });
+      // Store original location data for rollback
+      const originalLocation = get().locations.find(loc => loc.id === locationId);
+      
+      // Optimistically update the location
+      set(state => ({
+        locations: state.locations.map(loc =>
+          loc.id === locationId ? { ...loc, ...updatedData } : loc
+        )
+      }));
+
+      // Actually update the location
       await locationService.updateLocation(locationId, updatedData);
-      await get().fetchLocations(); // Refresh the locations list
     } catch (error) {
-      set({ error: 'Failed to update location', loading: false });
+      // Revert optimistic update on error
+      if (originalLocation) {
+        set(state => ({
+          locations: state.locations.map(loc =>
+            loc.id === locationId ? originalLocation : loc
+          ),
+          error: 'Failed to update location'
+        }));
+      }
       throw error;
     }
   },
 
   archiveLocation: async (locationId) => {
     try {
-      set({ loading: true, error: null });
+      // Optimistically archive the location
+      set(state => ({
+        locations: state.locations.map(loc =>
+          loc.id === locationId ? { ...loc, isArchived: true } : loc
+        )
+      }));
+
+      // Actually archive the location
       await locationService.archiveLocation(locationId);
-      await get().fetchLocations(); // Refresh the locations list
     } catch (error) {
-      set({ error: 'Failed to archive location', loading: false });
+      // Revert optimistic update on error
+      set(state => ({
+        locations: state.locations.map(loc =>
+          loc.id === locationId ? { ...loc, isArchived: false } : loc
+        ),
+        error: 'Failed to archive location'
+      }));
       throw error;
     }
   },
 
   restoreLocation: async (locationId) => {
     try {
-      set({ loading: true, error: null });
+      // Optimistically restore the location
+      set(state => ({
+        locations: state.locations.map(loc =>
+          loc.id === locationId ? { ...loc, isArchived: false } : loc
+        )
+      }));
+
+      // Actually restore the location
       await locationService.restoreLocation(locationId);
-      await get().fetchLocations(); // Refresh the locations list
     } catch (error) {
-      set({ error: 'Failed to restore location', loading: false });
+      // Revert optimistic update on error
+      set(state => ({
+        locations: state.locations.map(loc =>
+          loc.id === locationId ? { ...loc, isArchived: true } : loc
+        ),
+        error: 'Failed to restore location'
+      }));
       throw error;
     }
   },
