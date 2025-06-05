@@ -10,7 +10,8 @@ import {
   CheckCircle2, 
   ArrowRight
 } from 'lucide-react';
-import { useLocationStore, useEquipmentStore, useUserStore, useTimeEntryStore } from '@/store';
+import { useLocationStore } from '@/store/locationStore';
+import { useTimeEntryStore } from '@/store/timeEntryStore';
 import { useToast } from '@/hooks/use-toast';
 import { getISOWeekNumber } from '@/lib/utils';
 
@@ -24,25 +25,23 @@ const AdminDashboard = () => {
     activeEmployees: 0
   });
   
+  const [recentActivity, setRecentActivity] = useState([]);
+
   // Use Zustand stores
   const { locations, fetchLocations } = useLocationStore();
-  const { mowers, fetchMowers } = useEquipmentStore();
-  const { users, fetchUsers } = useUserStore();
-  const { getRecentTimeEntries, getWeeklyAggregatedHoursByEmployee } = useTimeEntryStore();
+  const { getWeeklyAggregatedHoursByEmployee, getRecentTimeEntries } = useTimeEntryStore();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
-        // Fetch all required data in parallel
-        await Promise.all([
-          fetchLocations(),
-          fetchMowers(),
-          fetchUsers()
-        ]);
+        // Fetch locations if not already loaded
+        if (locations.length === 0) {
+          await fetchLocations();
+        }
 
-        // Get weekly stats
+        // Get weekly stats (cached by Zustand)
         const weeklyHours = await getWeeklyAggregatedHoursByEmployee();
         
         // Calculate stats
@@ -58,7 +57,10 @@ const AdminDashboard = () => {
           totalLocations: activeLocations.length,
           activeEmployees: Object.keys(weeklyHours).length
         });
-        
+
+        // Get recent activity
+        const recent = await getRecentTimeEntries(5);
+        setRecentActivity(recent);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
@@ -72,7 +74,7 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [fetchLocations, fetchMowers, fetchUsers, getWeeklyAggregatedHoursByEmployee, locations, toast]);
+  }, [locations, fetchLocations, getWeeklyAggregatedHoursByEmployee, getRecentTimeEntries, toast]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('no-NO', {
@@ -183,9 +185,33 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
+            ) : recentActivity.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Ingen nylig aktivitet
+                </p>
+              </div>
             ) : (
               <div className="space-y-4">
-                {/* Recent activity will be populated here */}
+                {recentActivity.map((activity, i) => (
+                  <div key={activity.id}>
+                    {i > 0 && <Separator className="my-4" />}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium">{activity.locationName}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {activity.employeeName} • {formatDate(activity.date.toDate())}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link to={`/admin/drift`}>
+                          <ArrowRight className="h-4 w-4" />
+                          <span className="sr-only">Vis detaljer</span>
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

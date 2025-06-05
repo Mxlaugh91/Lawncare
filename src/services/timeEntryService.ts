@@ -21,22 +21,16 @@ import { getISOWeekNumber } from '@/lib/utils';
 
 export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'>) => {
   try {
-    console.log('Starting addTimeEntry with data:', entryData);
     let timeEntryId: string;
 
     await runTransaction(db, async (transaction) => {
-      console.log('Starting transaction');
-      
-      // First, perform all reads
       const locationRef = doc(db, 'locations', entryData.locationId);
       const locationDoc = await transaction.get(locationRef);
       
       if (!locationDoc.exists()) {
         throw new Error('Location not found');
       }
-      console.log('Location found:', locationDoc.data());
 
-      // Only get mower doc if a mower was actually used
       let mowerDoc;
       if (entryData.mowerId) {
         const mowerRef = doc(db, 'mowers', entryData.mowerId);
@@ -45,29 +39,21 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
         if (!mowerDoc.exists()) {
           throw new Error('Mower not found');
         }
-        console.log('Mower found:', mowerDoc.data());
       }
 
-      // Calculate current week number
       const currentDate = new Date();
       const currentWeek = getISOWeekNumber(currentDate);
-      console.log('Current week:', currentWeek);
 
-      // Create a new document reference
       const timeEntryRef = doc(collection(db, 'timeEntries'));
       timeEntryId = timeEntryRef.id;
-      console.log('Generated timeEntryId:', timeEntryId);
 
       const timeEntryData = {
         ...entryData,
         createdAt: serverTimestamp(),
       };
 
-      // Write the time entry
       transaction.set(timeEntryRef, timeEntryData);
-      console.log('Time entry data prepared:', timeEntryData);
 
-      // Update the location with the current week
       const locationUpdate: Record<string, any> = {
         lastMaintenanceWeek: currentWeek,
         updatedAt: serverTimestamp()
@@ -78,9 +64,7 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
       }
 
       transaction.update(locationRef, locationUpdate);
-      console.log('Location update prepared:', locationUpdate);
 
-      // Only update mower hours if a mower was actually used
       if (entryData.mowerId && mowerDoc) {
         const currentHours = mowerDoc.data().totalHours || 0;
         const mowerRef = doc(db, 'mowers', entryData.mowerId);
@@ -88,14 +72,9 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
           totalHours: currentHours + entryData.hours,
           updatedAt: serverTimestamp()
         });
-        console.log('Mower hours update prepared:', { 
-          currentHours, 
-          newHours: currentHours + entryData.hours 
-        });
       }
     });
 
-    console.log('Transaction completed successfully');
     return timeEntryId;
   } catch (error) {
     console.error('Error in addTimeEntry:', error);
@@ -105,8 +84,6 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
 
 export const getTimeEntriesForLocation = async (locationId: string, weekNumber?: number) => {
   try {
-    console.log('Getting time entries for location:', locationId, 'week:', weekNumber);
-    
     let q = query(
       collection(db, 'timeEntries'),
       where('locationId', '==', locationId),
@@ -114,7 +91,6 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     );
 
     if (weekNumber) {
-      // Get the start and end dates for the specified week
       const currentYear = new Date().getFullYear();
       const januaryFirst = new Date(currentYear, 0, 1);
       const firstThursday = new Date(currentYear, 0, 1 + ((4 - januaryFirst.getDay()) + 7) % 7);
@@ -129,8 +105,6 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      console.log('Week date range:', { weekStart, weekEnd });
-
       q = query(
         collection(db, 'timeEntries'),
         where('locationId', '==', locationId),
@@ -141,13 +115,10 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     }
     
     const querySnapshot = await getDocs(q);
-    const entries = querySnapshot.docs.map(doc => ({
+    return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as TimeEntry[];
-
-    console.log('Found time entries:', entries.length);
-    return entries;
   } catch (error) {
     console.error('Error in getTimeEntriesForLocation:', error);
     throw new Error('Could not get time entries');
@@ -156,8 +127,6 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
 
 export const getTimeEntriesForEmployee = async (employeeId: string, startDate?: Date, endDate?: Date) => {
   try {
-    console.log('Getting time entries for employee:', employeeId, { startDate, endDate });
-    
     let q = query(
       collection(db, 'timeEntries'),
       where('employeeId', '==', employeeId),
@@ -175,13 +144,10 @@ export const getTimeEntriesForEmployee = async (employeeId: string, startDate?: 
     }
     
     const querySnapshot = await getDocs(q);
-    const entries = querySnapshot.docs.map(doc => ({
+    return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as TimeEntry[];
-
-    console.log('Found time entries:', entries.length);
-    return entries;
   } catch (error) {
     console.error('Error in getTimeEntriesForEmployee:', error);
     throw new Error('Could not get time entries');
@@ -197,8 +163,6 @@ export const getWeeklyAggregatedHoursByEmployee = async () => {
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
-  
-  console.log('Getting weekly hours between:', { startOfWeek, endOfWeek });
 
   const q = query(
     collection(db, 'timeEntries'),
@@ -212,7 +176,6 @@ export const getWeeklyAggregatedHoursByEmployee = async () => {
     ...doc.data()
   })) as TimeEntry[];
   
-  // Group by employee and sum hours
   const aggregated: Record<string, number> = {};
   
   entries.forEach(entry => {
@@ -222,14 +185,11 @@ export const getWeeklyAggregatedHoursByEmployee = async () => {
     aggregated[entry.employeeId] += entry.hours;
   });
   
-  console.log('Weekly hours by employee:', aggregated);
   return aggregated;
 };
 
 export const getRecentTimeEntries = async (count: number = 5) => {
   try {
-    console.log('Getting recent time entries, count:', count);
-    
     const q = query(
       collection(db, 'timeEntries'),
       orderBy('date', 'desc'),
@@ -240,10 +200,7 @@ export const getRecentTimeEntries = async (count: number = 5) => {
     const entries = await Promise.all(querySnapshot.docs.map(async doc => {
       const data = doc.data();
       
-      // Get location name
       const location = await locationService.getLocationById(data.locationId);
-      
-      // Get employee name
       const employee = await userService.getUserById(data.employeeId);
       
       return {
@@ -254,7 +211,6 @@ export const getRecentTimeEntries = async (count: number = 5) => {
       };
     }));
     
-    console.log('Found recent entries:', entries.length);
     return entries as TimeEntry[];
   } catch (error) {
     console.error('Error in getRecentTimeEntries:', error);
@@ -264,8 +220,6 @@ export const getRecentTimeEntries = async (count: number = 5) => {
 
 export const tagEmployeeForTimeEntry = async (timeEntryId: string, taggedEmployeeId: string) => {
   try {
-    console.log('Tagging employee for time entry:', { timeEntryId, taggedEmployeeId });
-    
     const timeEntryRef = doc(db, 'timeEntries', timeEntryId);
     const timeEntryDoc = await getDoc(timeEntryRef);
     
@@ -279,9 +233,6 @@ export const tagEmployeeForTimeEntry = async (timeEntryId: string, taggedEmploye
       await updateDoc(timeEntryRef, {
         taggedEmployeeIds: [...currentTaggedEmployees, taggedEmployeeId]
       });
-      console.log('Employee tagged successfully');
-    } else {
-      console.log('Employee already tagged');
     }
   } catch (error) {
     console.error('Error in tagEmployeeForTimeEntry:', error);
@@ -291,8 +242,6 @@ export const tagEmployeeForTimeEntry = async (timeEntryId: string, taggedEmploye
 
 export const getPendingTimeEntriesForEmployee = async (employeeId: string) => {
   try {
-    console.log('Getting pending time entries for employee:', employeeId);
-    
     const q = query(
       collection(db, 'timeEntries'),
       where('taggedEmployeeIds', 'array-contains', employeeId),
@@ -300,13 +249,10 @@ export const getPendingTimeEntriesForEmployee = async (employeeId: string) => {
     );
     
     const querySnapshot = await getDocs(q);
-    const entries = querySnapshot.docs.map(doc => ({
+    return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as TimeEntry[];
-
-    console.log('Found pending entries:', entries.length);
-    return entries;
   } catch (error) {
     console.error('Error in getPendingTimeEntriesForEmployee:', error);
     throw new Error('Could not get pending time entries');
