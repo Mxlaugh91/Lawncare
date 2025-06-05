@@ -64,12 +64,20 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
   const weeks = Array.from({ length: 53 }, (_, i) => i + 1);
   const { start, end } = getISOWeekDates(selectedWeek);
 
+  // Format dates using Norwegian locale
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('no-NO', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-[280px] justify-start">
           <Calendar className="mr-2 h-4 w-4" />
-          Uke {selectedWeek} ({start} - {end})
+          Uke {selectedWeek} ({formatDate(start)} - {formatDate(end)})
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
