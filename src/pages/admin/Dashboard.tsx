@@ -10,9 +10,8 @@ import {
   CheckCircle2, 
   ArrowRight
 } from 'lucide-react';
-import * as adminService from '@/services/adminService';
+import { useLocationStore, useEquipmentStore, useUserStore, useTimeEntryStore } from '@/store';
 import { useToast } from '@/hooks/use-toast';
-import { TimeEntry } from '@/types';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -24,22 +23,41 @@ const AdminDashboard = () => {
     activeEmployees: 0
   });
   
-  const [recentActivity, setRecentActivity] = useState<TimeEntry[]>([]);
+  // Use Zustand stores
+  const { locations, fetchLocations } = useLocationStore();
+  const { mowers, fetchMowers } = useEquipmentStore();
+  const { users, fetchUsers } = useUserStore();
+  const { getRecentTimeEntries, getWeeklyAggregatedHoursByEmployee } = useTimeEntryStore();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const dashboardStats = await adminService.getDashboardStats();
         
+        // Fetch all required data in parallel
+        await Promise.all([
+          fetchLocations(),
+          fetchMowers(),
+          fetchUsers()
+        ]);
+
+        // Get weekly stats
+        const weeklyHours = await getWeeklyAggregatedHoursByEmployee();
+        
+        // Calculate stats
+        const activeLocations = locations.filter(loc => !loc.isArchived);
+        const completedThisWeek = activeLocations.filter(loc => {
+          const currentWeek = new Date().getWeek();
+          return loc.lastMaintenanceWeek === currentWeek;
+        }).length;
+
         setStats({
-          remainingLocations: dashboardStats.remainingLocations,
-          completedThisWeek: dashboardStats.completedThisWeek,
-          totalLocations: dashboardStats.totalLocations,
-          activeEmployees: dashboardStats.activeEmployees
+          remainingLocations: activeLocations.length - completedThisWeek,
+          completedThisWeek,
+          totalLocations: activeLocations.length,
+          activeEmployees: Object.keys(weeklyHours).length
         });
         
-        setRecentActivity(dashboardStats.recentActivity);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
@@ -53,7 +71,7 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [toast]);
+  }, [fetchLocations, fetchMowers, fetchUsers, getWeeklyAggregatedHoursByEmployee, locations, toast]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('no-NO', {
@@ -164,33 +182,9 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
-            ) : recentActivity.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Ingen nylig aktivitet
-                </p>
-              </div>
             ) : (
               <div className="space-y-4">
-                {recentActivity.map((activity, i) => (
-                  <div key={activity.id}>
-                    {i > 0 && <Separator className="my-4" />}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium">{activity.locationName}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.employeeName} • {formatDate(activity.date.toDate())}
-                        </p>
-                      </div>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link to={`/admin/drift`}>
-                          <ArrowRight className="h-4 w-4" />
-                          <span className="sr-only">Vis detaljer</span>
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                {/* Recent activity will be populated here */}
               </div>
             )}
           </CardContent>
