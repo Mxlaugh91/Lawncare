@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLocationStore, useEquipmentStore, useUserStore, useTimeEntryStore } from '@/store';
 import { useToast } from '@/hooks/use-toast';
+import { getISOWeekNumber } from '@/lib/utils';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -46,8 +47,8 @@ const AdminDashboard = () => {
         
         // Calculate stats
         const activeLocations = locations.filter(loc => !loc.isArchived);
+        const currentWeek = getISOWeekNumber(new Date());
         const completedThisWeek = activeLocations.filter(loc => {
-          const currentWeek = new Date().getWeek();
           return loc.lastMaintenanceWeek === currentWeek;
         }).length;
 
