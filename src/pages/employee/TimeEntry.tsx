@@ -19,7 +19,7 @@ import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
 import * as userService from '@/services/userService';
 import * as notificationService from '@/services/notificationService';
-import { getISOWeekNumber, getISOWeekDates } from '@/lib/utils';
+import { getISOWeekNumber, getISOWeekDates, formatDateToShortLocale } from '@/lib/utils';
 
 const timeEntrySchema = z.object({
   locationId: z.string({
@@ -211,7 +211,7 @@ const EmployeeTimeEntry = () => {
         <h1 className="text-2xl font-bold tracking-tight">Timeregistrering</h1>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          <span>Uke {currentWeek} ({weekDates.start} - {weekDates.end})</span>
+          <span>Uke {currentWeek} ({formatDateToShortLocale(weekDates.start)} - {formatDateToShortLocale(weekDates.end)})</span>
         </div>
       </div>
 

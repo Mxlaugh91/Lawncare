@@ -38,3 +38,10 @@ export function getISOWeekDates(weekNumber: number, year: number = new Date().ge
     end: weekEnd
   };
 }
+
+export function formatDateToShortLocale(date: Date): string {
+  return date.toLocaleDateString('nb-NO', {
+    day: '2-digit',
+    month: '2-digit'
+  });
+}
