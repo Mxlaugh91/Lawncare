@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -7,8 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getISOWeekNumber(date: Date): number {
   const target = new Date(date.valueOf());
-  const dayNumber = (date.getDay() + 6) % 7; // Adjust day number to make Monday = 0
-  target.setDate(target.getDate() - dayNumber + 3); // Nearest Thursday
+  const dayNumber = (date.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNumber + 3);
   const firstThursday = target.valueOf();
   target.setMonth(0, 1);
   if (target.getDay() !== 4) {
@@ -17,41 +17,31 @@ export function getISOWeekNumber(date: Date): number {
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
 }
 
-export function getISOWeekDates(weekNumber: number): {
-  start: string;
-  end: string;
-} {
-  const currentYear = new Date().getFullYear();
-  const januaryFirst = new Date(currentYear, 0, 1);
+export function getISOWeekDates(weekNumber: number, year: number = new Date().getFullYear()) {
+  // Create a date object for January 1st of the given year
+  const januaryFirst = new Date(year, 0, 1);
   
-  // Find first Thursday of the year
-  const firstThursday = new Date(currentYear, 0, 1 + ((4 - januaryFirst.getDay()) + 7) % 7);
+  // Get the Thursday in week 1 and add the appropriate number of weeks
+  const firstThursday = new Date(januaryFirst);
+  firstThursday.setDate(januaryFirst.getDate() + (4 - januaryFirst.getDay()) + ((weekNumber - 1) * 7));
   
-  // Calculate Monday of week 1
-  const firstWeekStart = new Date(firstThursday);
-  firstWeekStart.setDate(firstThursday.getDate() - 3);
+  // Get Monday by subtracting 3 days from Thursday
+  const weekStart = new Date(firstThursday);
+  weekStart.setDate(firstThursday.getDate() - 3);
   
-  // Calculate start of the target week
-  const weekStart = new Date(firstWeekStart);
-  weekStart.setDate(firstWeekStart.getDate() + (weekNumber - 1) * 7);
-  
-  // Calculate end of the week (Sunday)
+  // Get Sunday by adding 6 days to Monday
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
-
-  const formatter = new Intl.DateTimeFormat('no-NO', { 
-    day: '2-digit', 
-    month: '2-digit',
-    year: 'numeric'
-  });
-
+  
   return {
-    start: formatter.format(weekStart),
-    end: formatter.format(weekEnd)
+    start: weekStart,
+    end: weekEnd
   };
 }
 
-export function getWeekday(date: Date): string {
-  const weekdays = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
-  return weekdays[date.getDay()];
+export function formatDateToShortLocale(date: Date): string {
+  return date.toLocaleDateString('nb-NO', {
+    day: '2-digit',
+    month: '2-digit'
+  });
 }

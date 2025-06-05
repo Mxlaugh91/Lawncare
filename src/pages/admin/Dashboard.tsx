@@ -10,9 +10,10 @@ import {
   CheckCircle2, 
   ArrowRight
 } from 'lucide-react';
-import * as adminService from '@/services/adminService';
+import { useLocationStore } from '@/store/locationStore';
+import { useTimeEntryStore } from '@/store/timeEntryStore';
 import { useToast } from '@/hooks/use-toast';
-import { TimeEntry } from '@/types';
+import { getISOWeekNumber } from '@/lib/utils';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -24,22 +25,42 @@ const AdminDashboard = () => {
     activeEmployees: 0
   });
   
-  const [recentActivity, setRecentActivity] = useState<TimeEntry[]>([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+
+  // Use Zustand stores
+  const { locations, fetchLocations } = useLocationStore();
+  const { getWeeklyAggregatedHoursByEmployee, getRecentTimeEntries } = useTimeEntryStore();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const dashboardStats = await adminService.getDashboardStats();
         
+        // Fetch locations if not already loaded
+        if (locations.length === 0) {
+          await fetchLocations();
+        }
+
+        // Get weekly stats (cached by Zustand)
+        const weeklyHours = await getWeeklyAggregatedHoursByEmployee();
+        
+        // Calculate stats
+        const activeLocations = locations.filter(loc => !loc.isArchived);
+        const currentWeek = getISOWeekNumber(new Date());
+        const completedThisWeek = activeLocations.filter(loc => {
+          return loc.lastMaintenanceWeek === currentWeek;
+        }).length;
+
         setStats({
-          remainingLocations: dashboardStats.remainingLocations,
-          completedThisWeek: dashboardStats.completedThisWeek,
-          totalLocations: dashboardStats.totalLocations,
-          activeEmployees: dashboardStats.activeEmployees
+          remainingLocations: activeLocations.length - completedThisWeek,
+          completedThisWeek,
+          totalLocations: activeLocations.length,
+          activeEmployees: Object.keys(weeklyHours).length
         });
-        
-        setRecentActivity(dashboardStats.recentActivity);
+
+        // Get recent activity
+        const recent = await getRecentTimeEntries(5);
+        setRecentActivity(recent);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
@@ -53,7 +74,7 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [toast]);
+  }, [locations, fetchLocations, getWeeklyAggregatedHoursByEmployee, getRecentTimeEntries, toast]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('no-NO', {
