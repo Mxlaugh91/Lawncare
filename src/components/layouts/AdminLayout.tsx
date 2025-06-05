@@ -66,6 +66,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             </div>
             <h1 className="text-xl font-semibold text-primary">PlenPilot</h1>
           </div>
+                 </div>
 
         <div className="flex items-center gap-4">
           <DropdownMenu>
