@@ -54,19 +54,21 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 glass-effect border-b border-border/40 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center">
-          <div 
-            className="flex items-center cursor-pointer" 
-            onClick={() => navigate('/admin')}
-          >
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold mr-2">
-              PP
-            </div>
-            <h1 className="text-xl font-semibold text-primary">PlenPilot</h1>
-          </div>
-        </div>
+      {/* Nytt navigasjonsfelt (header) */}
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-8">
+              {/* Logo og Tittel */}
+              <div 
+                className="flex items-center space-x-2 cursor-pointer"
+                onClick={() => navigate('/admin')}
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">PP</span>
+                </div>
+                <span className="font-bold text-xl text-gray-900">AdminWork</span>
+              </div>
 
         <div className="flex items-center gap-4">
           <DropdownMenu>
