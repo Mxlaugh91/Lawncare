@@ -220,7 +220,10 @@ const Operations = () => {
                     <div className="text-sm font-medium">Utført</div>
                     <div className="text-sm">
                       {new Intl.DateTimeFormat('no-NO', {
-                          weekday 'long'
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
                       }).format(location.timeEntries[0].date.toDate())}
                     </div>
                   </div>
