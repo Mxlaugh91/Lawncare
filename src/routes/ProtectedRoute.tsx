@@ -20,7 +20,7 @@ const ProtectedRoute = () => {
   }
 
   if (isAdmin) {
-    return <Navigate to="/admin\" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
   return (
