@@ -1,0 +1,82 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Admins can read all user documents
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Only allow creation/updates by admins
+      allow create, update: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Locations collection
+    match /locations/{locationId} {
+      // Authenticated users can read
+      allow read: if request.auth != null;
+      
+      // Only admins can write
+      allow create, update, delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Time entries collection
+    match /timeEntries/{entryId} {
+      // Users can read their own entries, admins can read all
+      allow read: if request.auth != null && (
+        resource.data.employeeId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      
+      // Users can create entries for themselves
+      allow create: if request.auth != null && 
+        request.resource.data.employeeId == request.auth.uid;
+      
+      // Only admins can update/delete
+      allow update, delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Mowers and service intervals
+    match /mowers/{mowerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /serviceIntervals/{intervalId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read, update: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      
+      // System can create notifications
+      allow create: if request.auth != null;
+    }
+
+    // Season settings
+    match /season_settings/{settingId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
