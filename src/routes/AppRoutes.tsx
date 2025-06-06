@@ -39,7 +39,7 @@ const AppRoutes = () => {
           !currentUser ? (
             <LoginPage />
           ) : isAdmin ? (
-            <Navigate to="/admin\" replace />
+            <Navigate to="/admin" replace />
           ) : (
             <Navigate to="/employee" replace />
           )
