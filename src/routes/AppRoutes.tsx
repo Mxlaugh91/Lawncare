@@ -51,7 +51,7 @@ const AppRoutes = () => {
         path="/" 
         element={
           !currentUser ? (
-            <Navigate to="/login\" replace />
+            <Navigate to="/login" replace />
           ) : isAdmin ? (
             <Navigate to="/admin" replace />
           ) : (
