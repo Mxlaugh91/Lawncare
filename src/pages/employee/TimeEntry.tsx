@@ -77,23 +77,33 @@ const EmployeeTimeEntry = () => {
         setLoading(true);
         
         // Get locations with weekly status
-        const locationsWithStatus = await locationService.isDueForMaintenanceInSelectedWeek(currentWeek);
+        const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
         
         // Filter out completed locations
-        const availableLocations = locationsWithStatus
-          .filter(loc => loc.status !== 'fullfort')
-          .map(loc => ({
-            id: loc.id,
-            name: loc.name,
-            address: loc.address,
-            maintenanceFrequency: loc.maintenanceFrequency,
-            edgeCuttingFrequency: loc.edgeCuttingFrequency,
-            startWeek: loc.startWeek,
-            notes: loc.notes,
-            isArchived: loc.isArchived,
-            createdAt: loc.createdAt,
-            updatedAt: loc.updatedAt,
-          }));
+       const availableLocations = locationsWithStatus.filter(loc => {
+     if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
+      if (loc.status === 'fullfort') return false;
+            if (loc.status === 'planlagt' || loc.status === 'ikke_utfort') {
+      if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
+    return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
+    } 
+  return true;
+  } )
+  .map(loc => ({
+    id: loc.id,
+    name: loc.name,
+    address: loc.address,
+    maintenanceFrequency: loc.maintenanceFrequency,
+    edgeCuttingFrequency: loc.edgeCuttingFrequency,
+    startWeek: loc.startWeek,
+    notes: loc.notes,
+    isArchived: loc.isArchived,
+    createdAt: loc.createdAt,
+    updatedAt: loc.updatedAt,
+    status: loc.status, // <-- keep this!
+    isDueForMaintenanceInSelectedWeek: loc.isDueForMaintenanceInSelectedWeek,
+    isDueForEdgeCuttingInSelectedWeek: loc.isDueForEdgeCuttingInSelectedWeek,
+  }));
 
         const [mowerData, employeeData] = await Promise.all([
           equipmentService.getAllMowers(),
