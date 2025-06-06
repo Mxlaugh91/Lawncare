@@ -77,7 +77,7 @@ const EmployeeTimeEntry = () => {
         setLoading(true);
         
         // Get locations with weekly status
-        const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
+        const locationsWithStatus = await locationService.isDueForMaintenanceInSelectedWeek(currentWeek);
         
         // Filter out completed locations
         const availableLocations = locationsWithStatus
