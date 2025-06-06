@@ -83,7 +83,7 @@ const EmployeeTimeEntry = () => {
        const availableLocations = locationsWithStatus.filter(loc => {
      if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
       if (loc.status === 'fullfort') return false;
-            if (loc.status === 'planlagt' || loc.status === 'ikke_utfort') {
+            if (loc.status === 'ikke_utfort') {
       if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
     return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
     } 
