@@ -206,7 +206,7 @@ const EmployeeTimeEntry = () => {
       reset();
       setSelectedEmployees([]);
       setLocations((prev) => prev.filter(loc => loc.id !== data.locationId));
-      setSelectedLocation(null); // Optionally clear the selected locatio
+      setSelectedLocation(null); // Optionally clear the selected location
     } catch (error) {
       console.error('Error submitting time entry:', error);
       toast({
