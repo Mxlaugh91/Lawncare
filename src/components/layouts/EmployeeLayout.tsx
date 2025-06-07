@@ -54,47 +54,49 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 glass-effect border-b border-border/40 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center">
-          <div 
-            className="flex items-center cursor-pointer" 
-            onClick={() => navigate('/employee')}
-          >
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold mr-2">
-              PP
+      <header className="sticky top-0 z-40 glass-effect border-b border-border/40">
+        <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => navigate('/employee')}
+            >
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold mr-2">
+                PP
+              </div>
+              <h1 className="text-xl font-semibold text-primary">PlenPilot</h1>
             </div>
-            <h1 className="text-xl font-semibold text-primary">PlenPilot</h1>
           </div>
-        </div>
 
-        <div className="flex items-center gap-4">
-          <NotificationBell />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8 bg-primary/10 text-primary">
-                  <AvatarFallback>{getInitials()}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{currentUser?.email}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                      Ansatt
-                    </span>
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logg ut</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8 bg-primary/10 text-primary">
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{currentUser?.email}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                        Ansatt
+                      </span>
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logg ut</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
@@ -124,8 +126,10 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto pb-16 md:pb-6 p-6">
-          {children}
+        <main className="flex-1 overflow-auto pb-16 md:pb-6">
+          <div className="max-w-screen-xl mx-auto px-6 py-6">
+            {children}
+          </div>
         </main>
 
         {/* Mobile Bottom Navigation */}
