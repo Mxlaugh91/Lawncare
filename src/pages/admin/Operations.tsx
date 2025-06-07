@@ -201,7 +201,7 @@ const Operations = () => {
           {isExpanded && (
             <div className="mt-4 space-y-3 border-t pt-3">
               <div>
-                <div className="text-sm font-medium">Hovedvedlikehold</div>
+                <div className="text-sm font-medium">Plenklipping</div>
                 <div className="text-sm">
                   {getMaintenanceStatus(location)}
                 </div>
@@ -217,13 +217,10 @@ const Operations = () => {
               {location.timeEntries && location.timeEntries.length > 0 && (
                 <>
                   <div>
-                    <div className="text-sm font-medium">Sist utført</div>
+                    <div className="text-sm font-medium">Utført</div>
                     <div className="text-sm">
                       {new Intl.DateTimeFormat('no-NO', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        weekday:'long',
                       }).format(location.timeEntries[0].date.toDate())}
                     </div>
                   </div>

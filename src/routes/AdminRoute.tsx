@@ -20,7 +20,7 @@ const AdminRoute = () => {
   }
 
   if (!isAdmin) {
-    return <Navigate to="/employee\" replace />;
+    return <Navigate to="/employee" replace />;
   }
 
   return (

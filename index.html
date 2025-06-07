@@ -1,10 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bedriftsintern Applikasjon for Vedlikeholdsstyring</title>
+    <title>PlenPilot</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Theme color for browser UI -->
+    <meta name="theme-color" content="#22c55e" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    
+    <!-- Apple specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PlenPilot" />
+    
+    <!-- Microsoft specific meta tags -->
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <meta name="msapplication-TileColor" content="#22c55e" />
+    
+    <!-- Description for SEO and app stores -->
+    <meta name="description" content="PlenPilot - Vedlikeholdsstyring for plenpleie og utstyr" />
+    
+    <!-- Keywords -->
+    <meta name="keywords" content="vedlikehold, plenpleie, gressklipping, kantklipping, utstyr" />
+    
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="PlenPilot" />
+    <meta property="og:description" content="Vedlikeholdsstyring for plenpleie og utstyr" />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/icons/icon-192x192.png" as="image" />
   </head>
   <body>
     <div id="root"></div>

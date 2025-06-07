@@ -185,7 +185,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <Label htmlFor="maintenanceFrequency">
-                      Frekvens hovedvedlikehold (uker) *
+                      Frekvens Klipping (uker) *
                     </Label>
                     <Input
                       id="maintenanceFrequency"
