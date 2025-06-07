@@ -100,32 +100,31 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
         </div>
       </header>
 
-      {/* Main Content Area with Sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden md:flex w-64 flex-col bg-card border-r border-border/40">
-          <nav className="flex-1 px-4 py-6 space-y-1">
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors nav-item ${
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted'
-                  }`
-                }
-                end={item.to === '/employee'}
-              >
-                {item.icon}
-                <span className="ml-2">{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </aside>
+      {/* Desktop Navigation Bar */}
+      <nav className="hidden md:flex glass-effect border-b border-border/40 py-2">
+        <div className="max-w-screen-xl mx-auto px-4 flex items-center space-x-4">
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors nav-item ${
+                  isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-muted'
+                }`
+              }
+              end={item.to === '/employee'}
+            >
+              {item.icon}
+              <span className="ml-2">{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
 
-        {/* Main Content */}
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-auto pb-16 md:pb-6">
           <div className="max-w-screen-xl mx-auto px-6 py-6">
             {children}
