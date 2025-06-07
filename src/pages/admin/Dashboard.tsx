@@ -100,11 +100,10 @@ const AdminDashboard = () => {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="animate-pulse">
-              <CardHeader className="h-20 bg-muted rounded-t-lg" />
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="h-6 bg-muted rounded w-1/2 mb-2" />
                 <div className="h-8 bg-muted rounded" />
               </CardContent>
@@ -112,56 +111,72 @@ const AdminDashboard = () => {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">Gjenstår</CardTitle>
-              <FileSpreadsheet className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-4">
-              <div className="text-lg md:text-2xl font-bold">{stats.remainingLocations}</div>
-              <p className="text-xs text-muted-foreground">
-                Steder som ikke er fullført
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="rounded-full bg-primary/10 p-2">
+                    <FileSpreadsheet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Gjenstår</p>
+                    <p className="text-xs text-muted-foreground">Steder som ikke er fullført</p>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold">{stats.remainingLocations}</div>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">Fullført denne uken</CardTitle>
-              <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-4">
-              <div className="text-lg md:text-2xl font-bold">{stats.completedThisWeek}</div>
-              <p className="text-xs text-muted-foreground">
-                Steder fullført
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="rounded-full bg-green-100 p-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Fullført denne uken</p>
+                    <p className="text-xs text-muted-foreground">Steder fullført</p>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold">{stats.completedThisWeek}</div>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">Totalt aktive steder</CardTitle>
-              <MapPin className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-4">
-              <div className="text-lg md:text-2xl font-bold">{stats.totalLocations}</div>
-              <p className="text-xs text-muted-foreground">
-                steder i systemet
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="rounded-full bg-blue-100 p-2">
+                    <MapPin className="h-4 w-4 text-blue-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Totalt aktive steder</p>
+                    <p className="text-xs text-muted-foreground">steder i systemet</p>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold">{stats.totalLocations}</div>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">Aktive ansatte</CardTitle>
-              <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pb-2 md:pb-4">
-              <div className="text-lg md:text-2xl font-bold">{stats.activeEmployees}</div>
-              <p className="text-xs text-muted-foreground">
-                som har registrert timer denne uken
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="rounded-full bg-amber-100 p-2">
+                    <Users className="h-4 w-4 text-amber-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Aktive ansatte</p>
+                    <p className="text-xs text-muted-foreground">som har registrert timer denne uken</p>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold">{stats.activeEmployees}</div>
+              </div>
             </CardContent>
           </Card>
         </div>
