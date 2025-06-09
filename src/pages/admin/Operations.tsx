@@ -161,7 +161,7 @@ const Operations = () => {
       case 'ikke_utfort':
         return <span className="text-destructive">Ikke utført</span>;
       default:
-        return <span className="text-amber-600">Planlagt denne uken</span>;
+        return <span className="text-amber-600">Planlagt</span>;
     }
   };
 
@@ -175,7 +175,7 @@ const Operations = () => {
       case 'ikke_utfort':
         return <span className="text-destructive">Ikke utført</span>;
       default:
-        return <span className="text-amber-600">Planlagt denne uken</span>;
+        return <span className="text-amber-600">Planlagt</span>;
     }
   };
 
