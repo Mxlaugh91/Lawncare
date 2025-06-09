@@ -167,7 +167,7 @@ const Operations = () => {
 
   const getEdgeCuttingStatus = (location: LocationWithStatus) => {
     if (!location.isDueForEdgeCuttingInSelectedWeek) {
-      return "Ikke planlagt denne uken";
+      return "Ikke aktuell";
     }
     switch (location.status) {
       case 'fullfort':
