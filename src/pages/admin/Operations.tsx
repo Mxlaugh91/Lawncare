@@ -73,6 +73,11 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
     });
   };
 
+  const handleWeekSelect = (week: number) => {
+    onWeekChange(week);
+    setIsOpen(false); // Lukker popoveren
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
