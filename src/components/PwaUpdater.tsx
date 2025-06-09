@@ -23,15 +23,23 @@ function PwaUpdater() {
   } = useRegisterSW({
     onRegistered(r) {
       console.log('Service Worker registered:', r);
+      // Check for updates periodically
+      if (r) {
+        setInterval(() => {
+          console.log('Checking for SW update...');
+          r.update();
+        }, 60000); // Check every minute for demo purposes, adjust as needed
+      }
     },
     onRegisterError(error) {
       console.log('Service Worker registration error:', error);
     },
     onNeedRefresh() {
-      console.log('New content available, will show update prompt');
+      console.log('🔄 New content available, will show update prompt');
+      // The needRefresh state will be automatically set to true
     },
     onOfflineReady() {
-      console.log('App ready to work offline');
+      console.log('✅ App ready to work offline');
     },
   });
 
@@ -83,31 +91,32 @@ function PwaUpdater() {
   };
 
   const handleUpdateClick = async () => {
-    console.log('Update button clicked, calling updateServiceWorker...');
+    console.log('🔄 Update button clicked, calling updateServiceWorker...');
     try {
       // Call updateServiceWorker with true to reload immediately
       await updateServiceWorker(true);
-      console.log('Update service worker called successfully');
+      console.log('✅ Update service worker called successfully - page should reload');
     } catch (error) {
-      console.error('Error updating service worker:', error);
+      console.error('❌ Error updating service worker:', error);
       // Fallback: force reload the page
       window.location.reload();
     }
   };
 
   const closeUpdatePrompt = () => {
-    console.log('Closing update prompt');
+    console.log('❌ Closing update prompt');
     setOfflineReady(false);
     setNeedRefresh(false);
   };
 
-  // Debug logging
+  // Enhanced debug logging
   useEffect(() => {
-    console.log('PwaUpdater state:', { 
+    console.log('🔍 PwaUpdater state:', { 
       needRefresh, 
       offlineReady, 
       isInstalled,
-      hasDeferredPrompt: !!deferredPrompt 
+      hasDeferredPrompt: !!deferredPrompt,
+      timestamp: new Date().toISOString()
     });
   }, [needRefresh, offlineReady, isInstalled, deferredPrompt]);
 
@@ -161,7 +170,7 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Update Prompt - Show regardless of installation status */}
+      {/* Update Prompt - Show when needRefresh is true */}
       {needRefresh && (
         <div style={{
           position: 'fixed',
@@ -169,43 +178,50 @@ function PwaUpdater() {
           right: '20px',
           background: '#3b82f6',
           color: 'white',
-          padding: '12px 20px',
+          padding: '16px 20px',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
           zIndex: 10000, // Higher z-index to ensure it's on top
-          maxWidth: '300px',
+          maxWidth: '320px',
+          border: '2px solid #1d4ed8',
         }}>
-          <div style={{ marginBottom: '8px' }}>
-            <span>Ny versjon tilgjengelig!</span>
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>🔄 Ny versjon tilgjengelig!</div>
+            <span style={{ fontSize: '14px', opacity: 0.9 }}>
+              En oppdatering er klar. Klikk for å laste inn den nyeste versjonen.
+            </span>
           </div>
-          <button 
-            onClick={handleUpdateClick}
-            style={{ 
-              background: 'white', 
-              color: '#3b82f6', 
-              border: 'none', 
-              padding: '6px 12px', 
-              borderRadius: '4px', 
-              marginRight: '8px', 
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
-          >
-            Oppdater nå
-          </button>
-          <button 
-            onClick={closeUpdatePrompt}
-            style={{ 
-              background: 'transparent', 
-              color: 'white', 
-              border: '1px solid white', 
-              padding: '6px 12px', 
-              borderRadius: '4px', 
-              cursor: 'pointer' 
-            }}
-          >
-            Senere
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              onClick={handleUpdateClick}
+              style={{ 
+                background: 'white', 
+                color: '#3b82f6', 
+                border: 'none', 
+                padding: '8px 16px', 
+                borderRadius: '4px', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '14px'
+              }}
+            >
+              Oppdater nå
+            </button>
+            <button 
+              onClick={closeUpdatePrompt}
+              style={{ 
+                background: 'transparent', 
+                color: 'white', 
+                border: '1px solid white', 
+                padding: '8px 16px', 
+                borderRadius: '4px', 
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Senere
+            </button>
+          </div>
         </div>
       )}
 
@@ -222,7 +238,7 @@ function PwaUpdater() {
           boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
           zIndex: 9999,
         }}>
-          <span>Appen er klar for offline bruk!</span>
+          <span>✅ Appen er klar for offline bruk!</span>
         </div>
       )}
     </>

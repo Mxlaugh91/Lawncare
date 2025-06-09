@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto',
 
       // DENNE LINJEN ER VIKTIG for å inkludere filer fra 'public'-mappen
@@ -16,8 +16,6 @@ export default defineConfig({
 
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        skipWaiting: true, // Enable automatic updates
-        clientsClaim: true, // Take control of all clients immediately
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
