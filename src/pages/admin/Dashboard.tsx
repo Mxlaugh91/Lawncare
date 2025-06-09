@@ -14,6 +14,7 @@ import { useLocationStore } from '@/store/locationStore';
 import { useTimeEntryStore } from '@/store/timeEntryStore';
 import { useToast } from '@/hooks/use-toast';
 import { getISOWeekNumber } from '@/lib/utils';
+import { TimeEntry } from '@/types';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -25,7 +26,7 @@ const AdminDashboard = () => {
     activeEmployees: 0
   });
   
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentActivity, setRecentActivity] = useState<TimeEntry[]>([]);
 
   // Use Zustand stores
   const { locations, fetchLocations } = useLocationStore();
