@@ -64,7 +64,7 @@ export default defineConfig({
             label: "PlenPilot Admin Dashboard - Oversikt over vedlikeholdsstatus"
           },
           {
-            src: "screenshots/desktop-operations.png",
+            src: "screenshots/desktop-dashboard.png",
             sizes: "981x269",
             type: "image/png",
             form_factor: "wide",
