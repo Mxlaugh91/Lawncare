@@ -106,10 +106,10 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   },
 
   updateLocation: async (locationId, updatedData) => {
+    // Store original location data for rollback
+    const originalLocation = get().locations.find(loc => loc.id === locationId);
+    
     try {
-      // Store original location data for rollback
-      const originalLocation = get().locations.find(loc => loc.id === locationId);
-      
       // Optimistically update the location
       set(state => ({
         locations: state.locations.map(loc =>
@@ -134,6 +134,9 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   },
 
   archiveLocation: async (locationId) => {
+    // Store original location data for rollback
+    const originalLocation = get().locations.find(loc => loc.id === locationId);
+    
     try {
       // Optimistically archive the location
       set(state => ({
@@ -146,17 +149,22 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       await locationService.archiveLocation(locationId);
     } catch (error) {
       // Revert optimistic update on error
-      set(state => ({
-        locations: state.locations.map(loc =>
-          loc.id === locationId ? { ...loc, isArchived: false } : loc
-        ),
-        error: 'Failed to archive location'
-      }));
+      if (originalLocation) {
+        set(state => ({
+          locations: state.locations.map(loc =>
+            loc.id === locationId ? originalLocation : loc
+          ),
+          error: 'Failed to archive location'
+        }));
+      }
       throw error;
     }
   },
 
   restoreLocation: async (locationId) => {
+    // Store original location data for rollback
+    const originalLocation = get().locations.find(loc => loc.id === locationId);
+    
     try {
       // Optimistically restore the location
       set(state => ({
@@ -169,12 +177,14 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       await locationService.restoreLocation(locationId);
     } catch (error) {
       // Revert optimistic update on error
-      set(state => ({
-        locations: state.locations.map(loc =>
-          loc.id === locationId ? { ...loc, isArchived: true } : loc
-        ),
-        error: 'Failed to restore location'
-      }));
+      if (originalLocation) {
+        set(state => ({
+          locations: state.locations.map(loc =>
+            loc.id === locationId ? originalLocation : loc
+          ),
+          error: 'Failed to restore location'
+        }));
+      }
       throw error;
     }
   },
