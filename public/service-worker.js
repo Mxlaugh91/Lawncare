@@ -6,9 +6,9 @@ const DYNAMIC_CACHE_NAME = 'plenpilot-dynamic-v1';
 const STATIC_ASSETS = [
   '/Lawncare/',
   '/Lawncare/index.html',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/Lawncare/manifest.json',
+  '/Lawncare//icons/icon-192x192.png',
+  '/Lawncare//icons/icon-512x512.png'
 ];
 
 // Install event - cache static assets
