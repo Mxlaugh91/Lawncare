@@ -4,41 +4,35 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  // 1. Korrekt base-sti for GitHub Pages
   base: '/Lawncare/',
-
-  // 2. Inkluderer både React-pluginen og PWA-pluginen
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
 
-      // 3. Konfigurasjon for service-workeren (Workbox)
+      // DENNE LINJEN ER VIKTIG for å inkludere filer fra 'public'-mappen
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
+
       workbox: {
-        // Cacher alle vanlige filer
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        
-        // Denne regelen hindrer krasj med Firebase
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
-            handler: 'NetworkFirst', // Prøver alltid nettverket først
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'firestore-cache',
               expiration: {
-              maxEntries: 50,
-              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dager i sekunder
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dager
               },
               cacheableResponse: {
-                statuses: [0, 200], // Mellomlagrer vellykkede responser
+                statuses: [0, 200],
               },
             },
           },
         ],
       },
-
-      // 4. Manifest-konfigurasjon (erstatter din gamle manifest.json-fil)
       manifest: {
         name: 'PlenPilot',
         short_name: 'PlenPilot',
@@ -47,7 +41,7 @@ export default defineConfig({
         background_color: '#f8fafc',
         display: 'standalone',
         scope: '/Lawncare/',
-        start_url: '/Lawncare/index.html',
+        start_url: '/Lawncare/', // Endret tilbake til enklere standard
         orientation: 'portrait-primary',
         lang: 'no',
         icons: [
@@ -64,8 +58,6 @@ export default defineConfig({
       }
     })
   ],
-
-  // 5. Dine personlige innstillinger forblir de samme
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
