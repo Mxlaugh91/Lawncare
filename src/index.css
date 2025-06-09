@@ -22,6 +22,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #f8fafc;
+  font-size: 16px; /* Set global font size to 16px to prevent iOS zoom */
 }
 
 @layer base {
@@ -77,6 +78,12 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 16px; /* Ensure 16px font size is applied */
+  }
+  
+  /* Ensure input fields have minimum 16px font size to prevent iOS zoom */
+  input, textarea, select {
+    font-size: 16px !important;
   }
 }
 
