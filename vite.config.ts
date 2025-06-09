@@ -78,7 +78,7 @@ export default defineConfig({
             label: "PlenPilot Mobil Dashboard - Oversikt for ansatte"
           },
           {
-            src: "screenshots/mobile-timeentry.png",
+            src: "screenshots/mobile-dashboard.png",
             sizes: "390x844",
             type: "image/png",
             form_factor: "narrow",
