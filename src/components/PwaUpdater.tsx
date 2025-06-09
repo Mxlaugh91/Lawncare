@@ -1,8 +1,7 @@
-// src/components/PwaUpdater.tsx
+// Alternative approach with more explicit control
 import { useState, useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-// Define the BeforeInstallPromptEvent interface
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{
@@ -15,6 +14,7 @@ interface BeforeInstallPromptEvent extends Event {
 function PwaUpdater() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -23,20 +23,12 @@ function PwaUpdater() {
   } = useRegisterSW({
     onRegistered(r) {
       console.log('Service Worker registered:', r);
-      // Check for updates periodically
-      if (r) {
-        setInterval(() => {
-          console.log('Checking for SW update...');
-          r.update();
-        }, 60000); // Check every minute for demo purposes, adjust as needed
-      }
     },
     onRegisterError(error) {
       console.log('Service Worker registration error:', error);
     },
     onNeedRefresh() {
       console.log('🔄 New content available, will show update prompt');
-      // The needRefresh state will be automatically set to true
     },
     onOfflineReady() {
       console.log('✅ App ready to work offline');
@@ -44,21 +36,16 @@ function PwaUpdater() {
   });
 
   useEffect(() => {
-    // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
     }
 
-    // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       console.log('beforeinstallprompt event fired');
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Save the event so it can be triggered later
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
-    // Listen for the appinstalled event
     const handleAppInstalled = () => {
       console.log('PWA was installed');
       setIsInstalled(true);
@@ -68,7 +55,6 @@ function PwaUpdater() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Cleanup event listeners
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -78,29 +64,22 @@ function PwaUpdater() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
-    // Show the install prompt
     await deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    
     console.log(`User response to the install prompt: ${outcome}`);
-    
-    // Clear the deferredPrompt so it can only be used once
     setDeferredPrompt(null);
   };
 
-  const handleUpdateClick = async () => {
-    console.log('🔄 Update button clicked, calling updateServiceWorker...');
-    try {
-      // Call updateServiceWorker with true to reload immediately
-      await updateServiceWorker(true);
-      console.log('✅ Update service worker called successfully - page should reload');
-    } catch (error) {
-      console.error('❌ Error updating service worker:', error);
-      // Fallback: force reload the page
+  const handleUpdateClick = () => {
+    console.log('🔄 Update button clicked');
+    setIsUpdating(true);
+    setNeedRefresh(false);
+    
+    // Show updating message and reload after short delay
+    setTimeout(() => {
+      console.log('🔄 Reloading to apply update...');
       window.location.reload();
-    }
+    }, 500);
   };
 
   const closeUpdatePrompt = () => {
@@ -109,24 +88,13 @@ function PwaUpdater() {
     setNeedRefresh(false);
   };
 
-  // Enhanced debug logging
-  useEffect(() => {
-    console.log('🔍 PwaUpdater state:', { 
-      needRefresh, 
-      offlineReady, 
-      isInstalled,
-      hasDeferredPrompt: !!deferredPrompt,
-      timestamp: new Date().toISOString()
-    });
-  }, [needRefresh, offlineReady, isInstalled, deferredPrompt]);
-
   return (
     <>
-      {/* Install Prompt - Only show if app is NOT installed and we have a deferred prompt */}
+      {/* Install Prompt */}
       {!isInstalled && deferredPrompt && (
         <div style={{
           position: 'fixed',
-          bottom: needRefresh ? '140px' : '20px', // Position above update prompt if both are shown
+          bottom: needRefresh || isUpdating ? '140px' : '20px',
           right: '20px',
           background: '#22c55e',
           color: 'white',
@@ -170,8 +138,43 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Update Prompt - Show when needRefresh is true */}
-      {needRefresh && (
+      {/* Updating Message */}
+      {isUpdating && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          background: '#10b981',
+          color: 'white',
+          padding: '16px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          zIndex: 10000,
+          maxWidth: '320px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '20px',
+            height: '20px',
+            border: '2px solid #ffffff40',
+            borderTop: '2px solid #ffffff',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <span style={{ fontWeight: '500' }}>Oppdaterer app...</span>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Update Prompt */}
+      {needRefresh && !isUpdating && (
         <div style={{
           position: 'fixed',
           bottom: '20px',
@@ -181,7 +184,7 @@ function PwaUpdater() {
           padding: '16px 20px',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          zIndex: 10000, // Higher z-index to ensure it's on top
+          zIndex: 10000,
           maxWidth: '320px',
           border: '2px solid #1d4ed8',
         }}>
@@ -226,7 +229,7 @@ function PwaUpdater() {
       )}
 
       {/* Offline Ready Notification */}
-      {offlineReady && !needRefresh && (
+      {offlineReady && !needRefresh && !isUpdating && (
         <div style={{
           position: 'fixed',
           bottom: '20px',
