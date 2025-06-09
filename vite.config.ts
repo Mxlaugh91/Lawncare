@@ -58,14 +58,14 @@ export default defineConfig({
         screenshots: [
           {
             src: "screenshots/desktop-dashboard.png",
-            sizes: "1280x800",
+            sizes: "981x269",
             type: "image/png",
             form_factor: "wide",
             label: "PlenPilot Admin Dashboard - Oversikt over vedlikeholdsstatus"
           },
           {
             src: "screenshots/desktop-operations.png",
-            sizes: "1280x800",
+            sizes: "981x269",
             type: "image/png",
             form_factor: "wide",
             label: "PlenPilot Drift - Administrer alle vedlikeholdssteder"
