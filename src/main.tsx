@@ -14,7 +14,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js', {
-        scope: '/'
+        scope: '/Lawncare/'
       });
       
       console.log('Service Worker registered successfully:', registration.scope);
