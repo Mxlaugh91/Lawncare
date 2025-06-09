@@ -11,11 +11,19 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: 'auto',
 
-      // DENNE LINJEN ER VIKTIG for å inkludere filer fra 'public'-mappen
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
+
+      // Add custom service worker handling
+      injectManifest: {
+        swSrc: 'public/sw.js', // We'll create this file
+        swDest: 'sw.js',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+      },
 
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        skipWaiting: false, // We handle this manually with messages
+        clientsClaim: false, // We handle this manually
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
@@ -33,8 +41,14 @@ export default defineConfig({
           },
         ],
       },
+
+      // Important: Define how the SW should handle updates
+      devOptions: {
+        enabled: false, // Disable in dev to avoid conflicts
+      },
+
       manifest: {
-        id: '/Lawncare/', // Explicit app ID
+        id: '/Lawncare/',
         name: 'PlenPilot',
         short_name: 'PlenPilot',
         description: 'A maintenance management application for lawn care.',
