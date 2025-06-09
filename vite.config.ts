@@ -54,6 +54,36 @@ export default defineConfig({
           { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png" },
           { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" },
           { "src": "icons/maskable-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+        ],
+        screenshots: [
+          {
+            src: "screenshots/desktop-dashboard.png",
+            sizes: "1280x800",
+            type: "image/png",
+            form_factor: "wide",
+            label: "PlenPilot Admin Dashboard - Oversikt over vedlikeholdsstatus"
+          },
+          {
+            src: "screenshots/desktop-operations.png",
+            sizes: "1280x800",
+            type: "image/png",
+            form_factor: "wide",
+            label: "PlenPilot Drift - Administrer alle vedlikeholdssteder"
+          },
+          {
+            src: "screenshots/mobile-dashboard.png",
+            sizes: "396x594",
+            type: "image/png",
+            form_factor: "narrow",
+            label: "PlenPilot Mobil Dashboard - Oversikt for ansatte"
+          },
+          {
+            src: "screenshots/mobile-dashboard.png",
+            sizes: "396x594",
+            type: "image/png",
+            form_factor: "narrow",
+            label: "PlenPilot Timeregistrering - Registrer utført arbeid"
+          }
         ]
       }
     })
