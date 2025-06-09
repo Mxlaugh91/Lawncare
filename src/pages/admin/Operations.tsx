@@ -153,7 +153,7 @@ const Operations = () => {
 
   const getMaintenanceStatus = (location: LocationWithStatus) => {
     if (!location.isDueForMaintenanceInSelectedWeek) {
-      return "Ikke aktuell";
+      return "Ikke aktuelt";
     }
     switch (location.status) {
       case 'fullfort':
@@ -167,7 +167,7 @@ const Operations = () => {
 
   const getEdgeCuttingStatus = (location: LocationWithStatus) => {
     if (!location.isDueForEdgeCuttingInSelectedWeek) {
-      return "Ikke aktuell";
+      return "Ikke aktuelt";
     }
     switch (location.status) {
       case 'fullfort':
