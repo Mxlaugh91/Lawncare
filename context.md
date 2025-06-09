@@ -15,6 +15,69 @@ This is a maintenance management application built with React, TypeScript, and F
 - Icons: Lucide React
 - Forms: React Hook Form + Zod
 - Routing: React Router
+- PWA: vite-plugin-pwa
+
+## PWA Configuration
+
+### PWA Setup (vite.config.ts)
+The application is configured as a Progressive Web App using `vite-plugin-pwa`:
+
+```typescript
+VitePWA({
+  registerType: 'autoUpdate',
+  injectRegister: 'auto',
+  includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
+  workbox: {
+    globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+    runtimeCaching: [
+      {
+        urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'firestore-cache',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          },
+          cacheableResponse: {
+            statuses: [200],
+          },
+        },
+      },
+    ],
+  },
+  manifest: {
+    name: 'PlenPilot',
+    short_name: 'PlenPilot',
+    description: 'A maintenance management application for lawn care.',
+    theme_color: '#22c55e',
+    background_color: '#f8fafc',
+    display: 'standalone',
+    scope: '/Lawncare/',
+    start_url: '/Lawncare/',
+    orientation: 'portrait-primary',
+    lang: 'no',
+    icons: [/* various icon sizes */]
+  }
+})
+```
+
+### PWA Update Management (src/components/PwaUpdater.tsx)
+- Uses the official `virtual:pwa-register/react` hook
+- Provides user-friendly update notifications
+- Handles automatic service worker registration
+- Shows update prompts when new versions are available
+
+### Caching Strategy
+- **NetworkFirst** strategy for Firestore API calls
+- Automatic cache management with 30-day expiration
+- Caches up to 50 entries for offline functionality
+- Only caches successful responses (status 200)
+
+### Dependencies
+- `vite-plugin-pwa`: Development dependency for PWA functionality
+- Removed manual service worker registration from `main.tsx`
+- Automatic service worker injection and registration
 
 ## Directory Structure ##
 
@@ -23,7 +86,8 @@ src/
 ├── components/     # UI Components
 │   ├── layouts/   # Layout components
 │   ├── ui/        # shadcn/ui components
-│   └── notifications/ # Notification components
+│   ├── notifications/ # Notification components
+│   └── PwaUpdater.tsx # PWA update management
 ├── contexts/      # React Context providers
 ├── hooks/         # Custom React hooks
 ├── lib/           # Utility functions
@@ -333,6 +397,8 @@ cn(...inputs: ClassValue[]): string  // Tailwind class merging
 - Routes: `src/routes/AppRoutes.tsx`
 - Types: `src/types/index.ts`
 - Utils: `src/lib/utils.ts`
+- PWA Config: `vite.config.ts`
+- PWA Updater: `src/components/PwaUpdater.tsx`
 
 ### State Management
 - Stores: `src/store/`
