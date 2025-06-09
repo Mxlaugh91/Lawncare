@@ -27,6 +27,12 @@ function PwaUpdater() {
     onRegisterError(error) {
       console.log('Service Worker registration error:', error);
     },
+    onNeedRefresh() {
+      console.log('New content available, will show update prompt');
+    },
+    onOfflineReady() {
+      console.log('App ready to work offline');
+    },
   });
 
   useEffect(() => {
@@ -76,10 +82,34 @@ function PwaUpdater() {
     setDeferredPrompt(null);
   };
 
+  const handleUpdateClick = async () => {
+    console.log('Update button clicked, calling updateServiceWorker...');
+    try {
+      // Call updateServiceWorker with true to reload immediately
+      await updateServiceWorker(true);
+      console.log('Update service worker called successfully');
+    } catch (error) {
+      console.error('Error updating service worker:', error);
+      // Fallback: force reload the page
+      window.location.reload();
+    }
+  };
+
   const closeUpdatePrompt = () => {
+    console.log('Closing update prompt');
     setOfflineReady(false);
     setNeedRefresh(false);
   };
+
+  // Debug logging
+  useEffect(() => {
+    console.log('PwaUpdater state:', { 
+      needRefresh, 
+      offlineReady, 
+      isInstalled,
+      hasDeferredPrompt: !!deferredPrompt 
+    });
+  }, [needRefresh, offlineReady, isInstalled, deferredPrompt]);
 
   return (
     <>
@@ -142,14 +172,14 @@ function PwaUpdater() {
           padding: '12px 20px',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          zIndex: 9999,
+          zIndex: 10000, // Higher z-index to ensure it's on top
           maxWidth: '300px',
         }}>
           <div style={{ marginBottom: '8px' }}>
             <span>Ny versjon tilgjengelig!</span>
           </div>
           <button 
-            onClick={() => updateServiceWorker(true)}
+            onClick={handleUpdateClick}
             style={{ 
               background: 'white', 
               color: '#3b82f6', 
@@ -174,13 +204,13 @@ function PwaUpdater() {
               cursor: 'pointer' 
             }}
           >
-            Lukk
+            Senere
           </button>
         </div>
       )}
 
       {/* Offline Ready Notification */}
-      {offlineReady && (
+      {offlineReady && !needRefresh && (
         <div style={{
           position: 'fixed',
           bottom: '20px',
