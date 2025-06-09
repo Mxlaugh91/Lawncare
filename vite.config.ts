@@ -16,6 +16,8 @@ export default defineConfig({
 
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        skipWaiting: true, // Enable automatic updates
+        clientsClaim: true, // Take control of all clients immediately
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
@@ -34,6 +36,7 @@ export default defineConfig({
         ],
       },
       manifest: {
+        id: '/Lawncare/', // Explicit app ID
         name: 'PlenPilot',
         short_name: 'PlenPilot',
         description: 'A maintenance management application for lawn care.',
@@ -41,7 +44,7 @@ export default defineConfig({
         background_color: '#f8fafc',
         display: 'standalone',
         scope: '/Lawncare/',
-        start_url: '/Lawncare/', // Endret tilbake til enklere standard
+        start_url: '/Lawncare/',
         orientation: 'portrait-primary',
         lang: 'no',
         icons: [
@@ -58,17 +61,10 @@ export default defineConfig({
         screenshots: [
           {
             src: "screenshots/desktop-dashboard.png",
-            sizes: "320x320",
+            sizes: "1280x800",
             type: "image/png",
             form_factor: "wide",
             label: "PlenPilot Admin Dashboard - Oversikt over vedlikeholdsstatus"
-          },
-          {
-            src: "screenshots/desktop-dashboard.png",
-            sizes: "320x320",
-            type: "image/png",
-            form_factor: "wide",
-            label: "PlenPilot Drift - Administrer alle vedlikeholdssteder"
           },
           {
             src: "screenshots/mobile-dashboard.png",
@@ -76,13 +72,6 @@ export default defineConfig({
             type: "image/png",
             form_factor: "narrow",
             label: "PlenPilot Mobil Dashboard - Oversikt for ansatte"
-          },
-          {
-            src: "screenshots/mobile-dashboard.png",
-            sizes: "396x594",
-            type: "image/png",
-            form_factor: "narrow",
-            label: "PlenPilot Timeregistrering - Registrer utført arbeid"
           }
         ]
       }
