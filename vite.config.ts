@@ -27,7 +27,8 @@ export default defineConfig({
             options: {
               cacheName: 'firestore-cache',
               expiration: {
-                maxDays: 30, // Hvor lenge data skal beholdes i cachen
+              maxEntries: 50,
+              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dager i sekunder
               },
               cacheableResponse: {
                 statuses: [0, 200], // Mellomlagrer vellykkede responser
