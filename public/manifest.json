@@ -2,12 +2,12 @@
   "name": "PlenPilot",
   "short_name": "PlenPilot",
   "description": "A maintenance management application for lawn care.",
-  "start_url": "/",
+  "start_url": "/Lawncare/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#22c55e",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "/Lawncare/",
   "lang": "no",
   "icons": [
     {
