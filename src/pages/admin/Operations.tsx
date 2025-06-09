@@ -80,6 +80,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
 
   return (
     <Popover>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-[170px] justify-start">
           <Calendar className="mr-2 h-4 w-4" />
@@ -95,7 +96,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
                 key={week}
                 variant={selectedWeek === week ? "default" : "ghost"}
                 className="h-9 w-full"
-                onClick={() => onWeekChange(week)}
+                onClick={() => handleWeekSelect(week)}
               >
                 {week}
               </Button>
