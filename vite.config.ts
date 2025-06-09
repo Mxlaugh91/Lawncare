@@ -72,14 +72,14 @@ export default defineConfig({
           },
           {
             src: "screenshots/mobile-dashboard.png",
-            sizes: "390x844",
+            sizes: "396x594",
             type: "image/png",
             form_factor: "narrow",
             label: "PlenPilot Mobil Dashboard - Oversikt for ansatte"
           },
           {
             src: "screenshots/mobile-dashboard.png",
-            sizes: "390x844",
+            sizes: "396x594",
             type: "image/png",
             form_factor: "narrow",
             label: "PlenPilot Timeregistrering - Registrer utført arbeid"
