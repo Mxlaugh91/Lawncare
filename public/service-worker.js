@@ -7,8 +7,8 @@ const STATIC_ASSETS = [
   '/Lawncare/',
   '/Lawncare/index.html',
   '/Lawncare/manifest.json',
-  '/Lawncare//icons/icon-192x192.png',
-  '/Lawncare//icons/icon-512x512.png'
+  '/Lawncare/icons/icon-192x192.png',
+  '/Lawncare/icons/icon-512x512.png'
 ];
 
 // Install event - cache static assets
