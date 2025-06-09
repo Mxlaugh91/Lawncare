@@ -79,7 +79,6 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
   };
 
   return (
-    <Popover>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-[170px] justify-start">
@@ -105,6 +104,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
         </div>
       </PopoverContent>
     </Popover>
+  );
 };
 
 const Operations = () => {
