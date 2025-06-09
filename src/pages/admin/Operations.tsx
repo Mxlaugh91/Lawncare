@@ -75,7 +75,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-[280px] justify-start">
+        <Button variant="outline" className="w-[233px] justify-start">
           <Calendar className="mr-2 h-4 w-4" />
           Uke {selectedWeek} ({formatDate(start)} - {formatDate(end)})
         </Button>
