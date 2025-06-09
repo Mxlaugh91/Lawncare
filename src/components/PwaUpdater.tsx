@@ -1,4 +1,4 @@
-// Alternative approach with more explicit control
+// src/components/PwaUpdater.tsx
 import { useState, useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
@@ -14,7 +14,6 @@ interface BeforeInstallPromptEvent extends Event {
 function PwaUpdater() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -63,23 +62,43 @@ function PwaUpdater() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`User response to the install prompt: ${outcome}`);
     setDeferredPrompt(null);
   };
 
+  // Simplified update approach - close all tabs and reload
   const handleUpdateClick = () => {
     console.log('🔄 Update button clicked');
-    setIsUpdating(true);
+    
+    // Hide the prompt
     setNeedRefresh(false);
     
-    // Show updating message and reload after short delay
-    setTimeout(() => {
-      console.log('🔄 Reloading to apply update...');
-      window.location.reload();
-    }, 500);
+    // Show user message and instruction
+    const confirmed = window.confirm(
+      'For å fullføre oppdateringen må alle faner av appen lukkes og åpnes på nytt.\n\n' +
+      'Klikk OK for å lukke denne fanen. Åpne deretter appen på nytt for å se den oppdaterte versjonen.\n\n' +
+      '(Hvis du har flere faner åpne med appen, lukk dem også)'
+    );
+    
+    if (confirmed) {
+      // Try to close the tab/window
+      if (window.opener) {
+        window.close(); // Close popup/tab opened by another window
+      } else {
+        // For main window, try to close or navigate away
+        try {
+          window.close();
+        } catch (e) {
+          // If we can't close (main tab), reload instead
+          window.location.reload();
+        }
+      }
+    } else {
+      // User cancelled, show the prompt again
+      setNeedRefresh(true);
+    }
   };
 
   const closeUpdatePrompt = () => {
@@ -94,7 +113,7 @@ function PwaUpdater() {
       {!isInstalled && deferredPrompt && (
         <div style={{
           position: 'fixed',
-          bottom: needRefresh || isUpdating ? '140px' : '20px',
+          bottom: needRefresh ? '140px' : '20px',
           right: '20px',
           background: '#22c55e',
           color: 'white',
@@ -138,43 +157,8 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Updating Message */}
-      {isUpdating && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          background: '#10b981',
-          color: 'white',
-          padding: '16px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          zIndex: 10000,
-          maxWidth: '320px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <div style={{
-            width: '20px',
-            height: '20px',
-            border: '2px solid #ffffff40',
-            borderTop: '2px solid #ffffff',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <span style={{ fontWeight: '500' }}>Oppdaterer app...</span>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      )}
-
       {/* Update Prompt */}
-      {needRefresh && !isUpdating && (
+      {needRefresh && (
         <div style={{
           position: 'fixed',
           bottom: '20px',
@@ -191,7 +175,7 @@ function PwaUpdater() {
           <div style={{ marginBottom: '12px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>🔄 Ny versjon tilgjengelig!</div>
             <span style={{ fontSize: '14px', opacity: 0.9 }}>
-              En oppdatering er klar. Klikk for å laste inn den nyeste versjonen.
+              En oppdatering er klar. Lukk alle faner og åpne appen på nytt for å se den nyeste versjonen.
             </span>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -229,7 +213,7 @@ function PwaUpdater() {
       )}
 
       {/* Offline Ready Notification */}
-      {offlineReady && !needRefresh && !isUpdating && (
+      {offlineReady && !needRefresh && (
         <div style={{
           position: 'fixed',
           bottom: '20px',
