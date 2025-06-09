@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,12 +171,12 @@ const EmployeeTimeEntry = () => {
     }
 
     try {
-      // Add the time entry and get the ID
+      // Add the time entry and get the ID - Convert Date to Timestamp
       const timeEntryId = await timeEntryService.addTimeEntry({
         ...data,
         employeeId: currentUser.uid,
         employeeName: currentUser.displayName || currentUser.email || 'Ukjent',
-        date: new Date(),
+        date: Timestamp.fromDate(new Date()),
         taggedEmployeeIds: selectedEmployees,
       });
       
