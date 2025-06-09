@@ -21,9 +21,7 @@ import { getISOWeekNumber } from '@/lib/utils';
 
 export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'>) => {
   try {
-    let timeEntryId: string;
-
-    await runTransaction(db, async (transaction) => {
+    const timeEntryId = await runTransaction(db, async (transaction) => {
       const locationRef = doc(db, 'locations', entryData.locationId);
       const locationDoc = await transaction.get(locationRef);
       
@@ -45,7 +43,7 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
       const currentWeek = getISOWeekNumber(currentDate);
 
       const timeEntryRef = doc(collection(db, 'timeEntries'));
-      timeEntryId = timeEntryRef.id;
+      const newTimeEntryId = timeEntryRef.id;
 
       const timeEntryData = {
         ...entryData,
@@ -73,6 +71,8 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
           updatedAt: serverTimestamp()
         });
       }
+
+      return newTimeEntryId;
     });
 
     return timeEntryId;
