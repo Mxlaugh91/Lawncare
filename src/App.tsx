@@ -18,7 +18,7 @@ function App() {
   }, [initRealtimeUpdates, cleanup]);
 
   return (
-    <BrowserRouter>
+      <BrowserRouter basename="/Lawncare">
       <AuthProvider>
         <AppRoutes />
         <Toaster />
