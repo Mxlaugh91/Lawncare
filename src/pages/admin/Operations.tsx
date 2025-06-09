@@ -61,6 +61,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
   selectedWeek: number; 
   onWeekChange: (week: number) => void;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const weeks = Array.from({ length: 53 }, (_, i) => i + 1);
   const { start, end } = getISOWeekDates(selectedWeek);
 
