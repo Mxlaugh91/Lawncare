@@ -153,7 +153,7 @@ const Operations = () => {
 
   const getMaintenanceStatus = (location: LocationWithStatus) => {
     if (!location.isDueForMaintenanceInSelectedWeek) {
-      return "Ikke planlagt denne uken";
+      return "Ikke aktuell";
     }
     switch (location.status) {
       case 'fullfort':
