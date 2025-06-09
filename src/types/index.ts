@@ -32,7 +32,7 @@ export interface TimeEntry {
   date: Timestamp;
   hours: number;
   edgeCuttingDone: boolean;
-  mowerId?: string;
+  mowerId?: string | null;
   notes?: string;
   taggedEmployeeIds?: string[];
   createdAt: Timestamp;
