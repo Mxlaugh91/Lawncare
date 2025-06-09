@@ -160,7 +160,7 @@ export const MowerCard = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span>{formatDate(interval.lastResetDate?.toDate())}</span>
+                          <span>{formatDate(interval.lastResetDate?.toDate() ?? null)}</span>
                           {interval.lastResetBy && (
                             <span className="text-xs text-muted-foreground">
                               av {interval.lastResetBy}
