@@ -61,6 +61,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
   selectedWeek: number; 
   onWeekChange: (week: number) => void;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const weeks = Array.from({ length: 53 }, (_, i) => i + 1);
   const { start, end } = getISOWeekDates(selectedWeek);
 
@@ -72,10 +73,15 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
     });
   };
 
+  const handleWeekSelect = (week: number) => {
+    onWeekChange(week);
+    setIsOpen(false); // Lukker popoveren
+  };
+
   return (
-    <Popover>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-[280px] justify-start">
+        <Button variant="outline" className="w-[170px] justify-start">
           <Calendar className="mr-2 h-4 w-4" />
           Uke {selectedWeek} ({formatDate(start)} - {formatDate(end)})
         </Button>
@@ -89,7 +95,7 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
                 key={week}
                 variant={selectedWeek === week ? "default" : "ghost"}
                 className="h-9 w-full"
-                onClick={() => onWeekChange(week)}
+                onClick={() => handleWeekSelect(week)}
               >
                 {week}
               </Button>
@@ -153,7 +159,7 @@ const Operations = () => {
 
   const getMaintenanceStatus = (location: LocationWithStatus) => {
     if (!location.isDueForMaintenanceInSelectedWeek) {
-      return "Ikke planlagt denne uken";
+      return "Ikke aktuelt";
     }
     switch (location.status) {
       case 'fullfort':
@@ -161,13 +167,13 @@ const Operations = () => {
       case 'ikke_utfort':
         return <span className="text-destructive">Ikke utført</span>;
       default:
-        return <span className="text-amber-600">Planlagt denne uken</span>;
+        return <span className="text-amber-600">Planlagt</span>;
     }
   };
 
   const getEdgeCuttingStatus = (location: LocationWithStatus) => {
     if (!location.isDueForEdgeCuttingInSelectedWeek) {
-      return "Ikke planlagt denne uken";
+      return "Ikke aktuelt";
     }
     switch (location.status) {
       case 'fullfort':
@@ -175,7 +181,7 @@ const Operations = () => {
       case 'ikke_utfort':
         return <span className="text-destructive">Ikke utført</span>;
       default:
-        return <span className="text-amber-600">Planlagt denne uken</span>;
+        return <span className="text-amber-600">Planlagt</span>;
     }
   };
 
