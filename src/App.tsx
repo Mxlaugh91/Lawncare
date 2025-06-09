@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { useLocationStore } from '@/store/locationStore';
 import { useEffect } from 'react';
 import AppRoutes from '@/routes/AppRoutes';
+import PwaUpdater from '@/components/PwaUpdater'; // <-- 1. IMPORTER DEN NYE KOMPONENTEN HER
 import '@/App.css';
 
 function App() {
@@ -18,8 +19,9 @@ function App() {
   }, [initRealtimeUpdates, cleanup]);
 
   return (
-      <BrowserRouter basename="/Lawncare">
+    <BrowserRouter basename="/Lawncare">
       <AuthProvider>
+        <PwaUpdater /> {/* <-- 2. LEGG TIL KOMPONENTEN HER */}
         <AppRoutes />
         <Toaster />
       </AuthProvider>
