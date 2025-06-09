@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -70,12 +71,12 @@ export function TimeEntryDialog({
     try {
       setLoading(true);
 
-      // Add new time entry
+      // Add new time entry with Firebase Timestamp
       await timeEntryService.addTimeEntry({
         locationId,
         employeeId: currentUser.uid,
         employeeName: currentUser.displayName || currentUser.email || 'Ukjent',
-        date: new Date(),
+        date: Timestamp.fromDate(new Date()),
         hours: data.hours,
         edgeCuttingDone: data.edgeCuttingDone,
         notes: data.notes,
