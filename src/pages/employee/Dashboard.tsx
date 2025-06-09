@@ -175,7 +175,7 @@ const EmployeeDashboard = () => {
                 <CheckCircle2 className="h-12 w-12 text-primary mb-4" />
                 <h3 className="text-lg font-medium">Alle oppgaver er fullført!</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Det er ingen steder som trenger vedlikehold for øyeblikket.
+                  Det er ingen steder som trenger klipping for øyeblikket.
                 </p>
               </div>
             )}
