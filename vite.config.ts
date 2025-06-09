@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/Lawncare/', 
+  base: '/Lawncare/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -16,5 +16,5 @@ export default defineConfig({
   server: {
     port: 5176,
     host: '0.0.0.0',
-      },
+  },
 });
