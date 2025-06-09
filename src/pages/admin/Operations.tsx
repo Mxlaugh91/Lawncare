@@ -105,7 +105,6 @@ const WeekSelector = ({ selectedWeek, onWeekChange }: {
         </div>
       </PopoverContent>
     </Popover>
-  );
 };
 
 const Operations = () => {
