@@ -81,15 +81,10 @@ function PwaUpdater() {
     setNeedRefresh(false);
   };
 
-  // Don't show anything if the app is already installed
-  if (isInstalled) {
-    return null;
-  }
-
   return (
     <>
-      {/* Install Prompt */}
-      {deferredPrompt && (
+      {/* Install Prompt - Only show if app is NOT installed and we have a deferred prompt */}
+      {!isInstalled && deferredPrompt && (
         <div style={{
           position: 'fixed',
           bottom: needRefresh ? '140px' : '20px', // Position above update prompt if both are shown
@@ -136,7 +131,7 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Update Prompt */}
+      {/* Update Prompt - Show regardless of installation status */}
       {needRefresh && (
         <div style={{
           position: 'fixed',
