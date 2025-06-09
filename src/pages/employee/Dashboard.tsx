@@ -137,7 +137,7 @@ const EmployeeDashboard = () => {
               Steder som gjenstår
             </CardTitle>
             <CardDescription>
-              Uke {currentWeek} - Steder som trenger vedlikehold
+              Uke {currentWeek} - Steder som trenger Klipping
             </CardDescription>
           </CardHeader>
           <CardContent>
