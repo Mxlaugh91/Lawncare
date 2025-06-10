@@ -68,13 +68,8 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('SW: SKIP_WAITING melding mottatt - tvinger aktivering');
     
-    // Force skipWaiting og ta kontroll
+    // Kun kall skipWaiting - activate event vil håndtere clients.claim()
     self.skipWaiting();
-    
-    // Ta kontroll over alle klienter umiddelbart
-    self.clients.claim().then(() => {
-      console.log('SW: Tvunget aktivering fullført');
-    });
   }
 });
 
