@@ -107,8 +107,9 @@ function PwaUpdater() {
   };
 
   const closeUpdatePrompt = () => {
+    console.log('[PWA Updater] closeUpdatePrompt called. Hiding reload prompt.');
     setShowReloadPrompt(false);
-    setNeedRefresh(false);
+
   };
 
   return (
