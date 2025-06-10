@@ -34,9 +34,12 @@ function PwaUpdater() {
     onRegisterError(error) {
       console.log('SW registreringsfeil:', error);
     },
-    onUpdated() {
-      console.log('SW oppdatert og aktivert');
-      // Ikke automatisk reload her siden vi håndterer det manuelt i handleUpdateClick
+    onNeedRefresh() {
+      console.log('onNeedRefresh callback trigget');
+      // Ikke sett showReloadPrompt her - vi håndterer det i useEffect
+    },
+    onOfflineReady() {
+      console.log('onOfflineReady callback trigget');
     },
   });
 
@@ -96,34 +99,34 @@ function PwaUpdater() {
     }
     
     try {
-      // Merk at oppdatering pågår
+      // Merk at oppdatering pågår og skjul dialogen
       setIsUpdating(true);
-      
-      // Skjul dialogen umiddelbart og merk at vi er i oppdateringsprosess
       setShowReloadPrompt(false);
-      setNeedRefresh(false);
       
-      // KRITISK: Kall updateServiceWorker(true) først for å resette tilstanden
-      console.log('Kaller updateServiceWorker(true) for å resette tilstand');
+      // KRITISK for prompt-modus: Kall updateServiceWorker med reloadPage=true
+      console.log('Kaller updateServiceWorker(true) - dette skal aktivere ny SW og reloade');
       await updateServiceWorker(true);
       
-      // Gi service worker tid til å oppdatere
+      // Hvis vi kommer hit uten reload, noe gikk galt - force reload
+      console.log('updateServiceWorker returnerte uten reload - tvinger reload');
       setTimeout(() => {
-        console.log('Tvinger reload etter updateServiceWorker');
         window.location.reload();
-      }, 500);
+      }, 1000);
       
     } catch (error) {
       console.error('Feil ved oppdatering av service worker:', error);
       // Resett state og force reload som fallback
       setIsUpdating(false);
+      setShowReloadPrompt(false);
+      setNeedRefresh(false);
       window.location.reload();
     }
   };
 
   const closeUpdatePrompt = () => {
+    console.log('Avbryter oppdatering - resetter tilstand');
     setShowReloadPrompt(false);
-    setNeedRefresh(false);
+    setNeedRefresh(false);  // KRITISK: Resett needRefresh tilstand eksplisitt
     setIsUpdating(false);
   };
 
