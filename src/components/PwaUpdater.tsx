@@ -17,13 +17,12 @@ function PwaUpdater() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [showReloadPrompt, setShowReloadPrompt] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isReloadingForUpdate, setIsReloadingForUpdate] = useState(false); // Nytt state flagg
+  const [isReloadingForUpdate, setIsReloadingForUpdate] = useState(false);
 
   const baseUrl = import.meta.env.BASE_URL || '/Lawncare/';
   
   const reloadApp = () => {
-    console.log('PwaUpdater: reloadApp() kalt. isReloadingForUpdate:', isReloadingForUpdate);
-    // Forhindre flere reloads hvis en allerede er i gang (selv om nettleseren vanligvis stopper JS)
+    console.log('PwaUpdater: reloadApp() kalt. isReloadingForUpdate på kalltidspunkt:', isReloadingForUpdate);
     if (window.location.href.includes('reloadingForUpdate=true')) {
         console.log('PwaUpdater: Reload allerede i gang (markør i URL), avbryter ny reload.');
         return;
@@ -36,9 +35,8 @@ function PwaUpdater() {
     if (currentHash && currentHash !== '#/' && currentHash !== '#') {
       newUrl += currentHash;
     }
-    // Legg til en markør for å unngå raske, doble reloads hvis noe går galt
     newUrl += (newUrl.includes('?') ? '&' : '?') + 'reloadingForUpdate=true';
-
+    console.log('PwaUpdater: Navigerer til:', newUrl);
     window.location.href = newUrl;
   };
 
@@ -53,31 +51,32 @@ function PwaUpdater() {
         setInterval(() => {
           console.log('PwaUpdater: Kjører periodisk r.update() for SW.');
           r.update();
-        }, 60 * 60 * 1000); // Hver time
+        }, 60 * 60 * 1000);
       }
     },
     onRegisterError(error) {
       console.log('PwaUpdater: SW registreringsfeil:', error);
     },
-    // onNeedRefresh og onOfflineReady callbacks er håndtert via state-variablene.
   });
 
-  // Lytt etter SW_ACTIVATED melding fra SW (som en sekundær mekanisme)
   useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'SW_ACTIVATED') {
         console.log('PwaUpdater: Mottok SW_ACTIVATED fra service worker.');
+        // MIDLERTIDIG DEAKTIVERT FOR FEILSØKING:
+        console.log('PwaUpdater: SW_ACTIVATED - Reload-logikk er midlertidig deaktivert for test.');
+        /*
         if (!isReloadingForUpdate) {
-          console.log('PwaUpdater: SW_ACTIVATED - Planlegger reload.');
+          console.log('PwaUpdater: SW_ACTIVATED - Planlegger reload (logikk er aktiv).');
           setIsReloadingForUpdate(true);
-          // Liten forsinkelse for å la ting sette seg, og la controllerchange fyre først hvis mulig
           setTimeout(() => {
-            console.log('PwaUpdater: SW_ACTIVATED - Utfører reload etter timeout.');
+            console.log('PwaUpdater: SW_ACTIVATED - Utfører reload etter timeout (logikk er aktiv).');
             reloadApp();
-          }, 1000); // Litt lenger forsinkelse
+          }, 1000); 
         } else {
           console.log('PwaUpdater: SW_ACTIVATED - Reload allerede påbegynt/planlagt, ignorerer.');
         }
+        */
       }
     };
 
@@ -91,13 +90,11 @@ function PwaUpdater() {
     };
   }, [isReloadingForUpdate]); // Viktig dependency
 
-  // Håndter visning av oppdateringsprompt
   useEffect(() => {
     if (needRefresh && !isUpdating && !isReloadingForUpdate) {
       console.log('PwaUpdater useEffect[needRefresh, isUpdating, isReloadingForUpdate]: Viser reload prompt.');
       setShowReloadPrompt(true);
     } else if (showReloadPrompt && (!needRefresh || isUpdating || isReloadingForUpdate)) {
-      // Skjul prompt hvis conditions ikke lenger møtes, og den er synlig
       console.log('PwaUpdater useEffect[needRefresh, isUpdating, isReloadingForUpdate]: Skjuler reload prompt.');
       setShowReloadPrompt(false);
     }
@@ -109,7 +106,6 @@ function PwaUpdater() {
     }
   }, [offlineReady]);
 
-  // Håndter PWA installasjonsprompt
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
       setIsInstalled(true);
@@ -146,20 +142,23 @@ function PwaUpdater() {
   };
 
   const handleUpdateClick = async () => {
-    console.log('PwaUpdater: Bruker trykket "Oppdater nå". isUpdating:', isUpdating, 'needRefresh:', needRefresh);
+    // VIKTIG LOGG: Sjekk om denne kalles én eller to ganger
+    const clickTimestamp = Date.now();
+    console.log(`PwaUpdater: handleUpdateClick ENTERED. Timestamp: ${clickTimestamp}. isUpdating: ${isUpdating}, needRefresh: ${needRefresh}, isReloadingForUpdate: ${isReloadingForUpdate}`);
+    
     if (isUpdating || !needRefresh || isReloadingForUpdate) {
-      console.log('PwaUpdater: Oppdatering pågår allerede, ikke nødvendig, eller reload er planlagt.');
+      console.log(`PwaUpdater: handleUpdateClick (${clickTimestamp}) - Avbryter: isUpdating=${isUpdating}, !needRefresh=${!needRefresh}, isReloadingForUpdate=${isReloadingForUpdate}`);
       return;
     }
 
     setIsUpdating(true);
-    setShowReloadPrompt(false); // Skjul prompten umiddelbart
+    setShowReloadPrompt(false);
 
     let backupTimeoutId: number | undefined = undefined;
 
     const onControllerChange = () => {
-      console.log('PwaUpdater: controllerchange event mottatt.');
-      clearTimeout(backupTimeoutId); // Avbryt backup timeout
+      console.log(`PwaUpdater: controllerchange event mottatt. Timestamp: ${Date.now()}`);
+      clearTimeout(backupTimeoutId); 
       if (!isReloadingForUpdate) {
         setIsReloadingForUpdate(true);
         console.log('PwaUpdater: controllerchange - Planlegger umiddelbar reload.');
@@ -174,19 +173,16 @@ function PwaUpdater() {
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration && registration.waiting) {
-        console.log('PwaUpdater: Sender SKIP_WAITING til ventende SW:', registration.waiting);
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        const skipWaitingId = `sw-skip-${Date.now()}`;
+        console.log(`PwaUpdater: Sender SKIP_WAITING (ID: ${skipWaitingId}) til ventende SW:`, registration.waiting);
+        registration.waiting.postMessage({ type: 'SKIP_WAITING', id: skipWaitingId });
       } else {
         console.warn('PwaUpdater: Ingen ventende SW funnet å sende SKIP_WAITING til. Muligens allerede aktivert.');
-        // Hvis ingen ventende SW, kan den ha aktivert veldig raskt.
-        // `controllerchange` kan allerede ha fyrt eller vil fyre snart.
-        // Vi stoler fortsatt på `controllerchange` eller backup timeout.
       }
 
-      // Start backup timeout *etter* forsøk på å sende SKIP_WAITING
       backupTimeoutId = window.setTimeout(() => {
-        console.log('PwaUpdater: Backup timeout nådd for SW oppdatering.');
-        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange); // Greit å prøve selv om {once: true}
+        console.log(`PwaUpdater: Backup timeout nådd for SW oppdatering. Timestamp: ${Date.now()}`);
+        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
         if (!isReloadingForUpdate) {
           setIsReloadingForUpdate(true);
           console.log('PwaUpdater: Backup timeout - Tvinger reload.');
@@ -194,50 +190,32 @@ function PwaUpdater() {
         } else {
           console.log('PwaUpdater: Backup timeout - Reload allerede påbegynt/planlagt, ignorerer.');
         }
-      }, 7000); // Litt lenger backup timeout
+      }, 7000); 
 
-      // Viktig: Kall updateServiceWorker(false) for å informere vite-pwa-plugin
-      // om at vi håndterer skipWaiting og reload manuelt.
-      // Dette resetter dens interne `needRefresh`-state.
-      console.log('PwaUpdater: Kaller updateServiceWorker(false) for å resette PWA state.');
-      await updateServiceWorker(false); // false = ikke automatisk reload
-      // Ikke sett setIsUpdating(false) her, siden siden skal reloade.
-      // Etter reload vil isUpdating være false (initial state).
+      console.log(`PwaUpdater (${clickTimestamp}): Kaller updateServiceWorker(false) for å resette PWA state.`);
+      await updateServiceWorker(false); 
 
     } catch (error) {
-      console.error('PwaUpdater: Feil under handleUpdateClick:', error);
-      // Fallback: Prøv å resette state og tving en reload for å komme ut av en mulig feiltilstand
+      console.error(`PwaUpdater (${clickTimestamp}): Feil under handleUpdateClick:`, error);
       clearTimeout(backupTimeoutId);
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
       
-      // Resett state så brukeren ikke sitter fast med "Oppdaterer..."
-      // isReloadingForUpdate vil håndtere selve reloaden
       if (!isReloadingForUpdate) {
-          setIsReloadingForUpdate(true); // Sørg for at reload skjer
+          setIsReloadingForUpdate(true);
           console.log('PwaUpdater: Feil i update - Tvinger reload.');
           reloadApp();
       }
-      // setIsUpdating(false); // Vil resettes ved reload
-      // setShowReloadPrompt(false); // Vil resettes ved reload
-      // setNeedRefresh(false); // La vite-plugin håndtere dette etter reload
     }
   };
 
   const closeUpdatePrompt = () => {
     console.log('PwaUpdater: Bruker trykket "Senere".');
     setShowReloadPrompt(false);
-    // Brukeren ønsker ikke å oppdatere nå.
-    // `needRefresh` vil forbli true, så prompten kan komme tilbake ved neste besøk/refresh
-    // eller etter neste periodiske sjekk, med mindre vi eksplisitt resetter den
-    // via updateServiceWorker(false)
-    // For nå, la `needRefresh` være som den er.
-    // updateServiceWorker(false); // Vurder om dette skal kalles for å "glemme" oppdateringen til neste sjekk
-    setIsUpdating(false); // Sørg for at isUpdating er false hvis brukeren avbryter
+    setIsUpdating(false); 
   };
 
   return (
     <>
-      {/* Installasjons-dialog */}
       {!isInstalled && deferredPrompt && (
         <div className="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up">
           <h3 className="font-semibold mb-1">Installer PlenPilot</h3>
@@ -249,11 +227,10 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Oppdaterings-dialog */}
       {showReloadPrompt && (
         <div className="fixed bottom-5 right-5 bg-blue-600 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up border-2 border-blue-700">
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-2xl animate-spin-slow">🔄</span> {/* Bruk en faktisk roterende emoji eller ikon */}
+            <span className="text-2xl">🔄</span> 
             <div>
               <h3 className="font-bold">Ny versjon tilgjengelig!</h3>
               <p className="text-sm opacity-90">Oppdater for å få de nyeste funksjonene</p>
@@ -282,7 +259,6 @@ function PwaUpdater() {
         </div>
       )}
       
-      {/* Offline-klar toast */}
       {offlineReady && !needRefresh && !showReloadPrompt && (
          <div className="fixed bottom-5 left-5 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg animate-fade-in">
            <span className="flex items-center gap-2">
