@@ -20,6 +20,7 @@ function App() {
 
   return (
     <BrowserRouter basename="/Lawncare">
+      <PwaUpdater />
       <AuthProvider>
         <PwaUpdater /> {/* <-- 2. LEGG TIL KOMPONENTEN HER */}
         <AppRoutes />
