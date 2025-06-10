@@ -18,6 +18,27 @@ function PwaUpdater() {
   const [showReloadPrompt, setShowReloadPrompt] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Get base URL for HashRouter (ingen basename nødvendig)
+  const baseUrl = import.meta.env.BASE_URL || '/Lawncare/';
+  
+  // Helper function for HashRouter-kompatibel reload
+  const reloadApp = () => {
+    const currentHash = window.location.hash;
+    console.log('Reloader app med HashRouter - current hash:', currentHash);
+    
+    // For HashRouter kan vi enten:
+    // 1. Bevare gjeldende hash-rute
+    // 2. Eller gå til base URL og la HashRouter håndtere default routing
+    
+    if (currentHash && currentHash !== '#/' && currentHash !== '#') {
+      // Bevare gjeldende rute
+      window.location.href = window.location.origin + baseUrl + currentHash;
+    } else {
+      // Gå til base URL (HashRouter vil håndtere default routing)
+      window.location.href = window.location.origin + baseUrl;
+    }
+  };
+
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
@@ -50,7 +71,7 @@ function PwaUpdater() {
         console.log('Mottok SW_ACTIVATED fra service worker - ny SW har tatt kontroll');
         // Den nye service workeren har tatt kontroll, reload nå
         setTimeout(() => {
-          window.location.reload();
+          reloadApp();
         }, 500);
       }
     };
@@ -136,7 +157,7 @@ function PwaUpdater() {
           console.log('Service worker controller endret - ny SW har tatt kontroll');
           // Vent litt for å la ny SW stabilisere seg, så reload
           setTimeout(() => {
-            window.location.reload();
+            reloadApp();
           }, 500);
         };
         
@@ -146,7 +167,7 @@ function PwaUpdater() {
         setTimeout(() => {
           console.log('Backup timeout - tvinger reload');
           navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
-          window.location.reload();
+          reloadApp();
         }, 3000);
       }
       
@@ -162,7 +183,7 @@ function PwaUpdater() {
       setNeedRefresh(false);
       
       setTimeout(() => {
-        window.location.reload();
+        reloadApp();
       }, 1000);
     }
   };
