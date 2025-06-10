@@ -43,6 +43,29 @@ function PwaUpdater() {
     },
   });
 
+  // Listen for service worker messages
+  useEffect(() => {
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SW_ACTIVATED') {
+        console.log('Mottok SW_ACTIVATED fra service worker - ny SW har tatt kontroll');
+        // Den nye service workeren har tatt kontroll, reload nå
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
+    };
+  }, []);
+
   // onNeedRefresh og onOfflineReady vil bli trigget av useRegisterSW.
   // Vi setter showReloadPrompt til true når det er en oppdatering.
   useEffect(() => {
@@ -103,19 +126,33 @@ function PwaUpdater() {
       setIsUpdating(true);
       setShowReloadPrompt(false);
       
-      console.log('Kaller updateServiceWorker(true) - dette skal aktivere ny SW og reloade');
-      
-      // For prompt-modus er dette den riktige måten
-      await updateServiceWorker(true);
-      
-      // Hvis updateServiceWorker ikke automatisk reloader, gjør det manuelt
-      console.log('updateServiceWorker fullført - sjekker om reload er nødvendig');
-      setTimeout(() => {
-        if (!document.hidden) { // Bare reload hvis vinduet er synlig
-          console.log('Tvinger reload siden updateServiceWorker ikke gjorde det automatisk');
+      // FØRST: Send melding til service worker om å aktivere umiddelbart
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        console.log('Sender SKIP_WAITING melding til service worker');
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+        
+        // Lyt etter controller change (ny service worker tar over)
+        const handleControllerChange = () => {
+          console.log('Service worker controller endret - ny SW har tatt kontroll');
+          // Vent litt for å la ny SW stabilisere seg, så reload
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        };
+        
+        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange, { once: true });
+        
+        // Backup timeout i tilfelle controllerchange ikke triggeres
+        setTimeout(() => {
+          console.log('Backup timeout - tvinger reload');
+          navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
           window.location.reload();
-        }
-      }, 2000);
+        }, 3000);
+      }
+      
+      // DERETTER: Kall updateServiceWorker for å fullføre PWA-state
+      console.log('Kaller updateServiceWorker(false) for å resette PWA state uten auto-reload');
+      await updateServiceWorker(false); // false = ikke automatisk reload
       
     } catch (error) {
       console.error('Feil ved oppdatering av service worker:', error);
@@ -124,7 +161,6 @@ function PwaUpdater() {
       setShowReloadPrompt(false);
       setNeedRefresh(false);
       
-      // Forsinket reload for å unngå race conditions
       setTimeout(() => {
         window.location.reload();
       }, 1000);
