@@ -22,8 +22,9 @@ export default defineConfig({
 
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        skipWaiting: false, // We handle this manually with messages
-        clientsClaim: false, // We handle this manually
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
