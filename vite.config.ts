@@ -22,10 +22,6 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       
-      devOptions: {
-        enabled: true,
-        type: 'module',
-      },
       
       // Include assets for precaching
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
