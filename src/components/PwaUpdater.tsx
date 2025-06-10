@@ -1,4 +1,4 @@
-// PwaUpdater.jsx
+// PwaUpdater.tsx
 
 import { useState, useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -89,18 +89,42 @@ function PwaUpdater() {
     }
   };
 
-  const handleUpdateClick = () => {
-    console.log('Bruker trykket "Oppdater nå" - ber service worker om å aktivere seg');
-    // Skjul oppdateringsdialogen umiddelbart for bedre UX
-    setShowReloadPrompt(false);
+  const handleUpdateClick = async () => {
+    console.log('Bruker trykket "Oppdater nå"');
     
-    // Be den nye service worker-en om å aktivere seg
-    // onUpdated-callback-en vil håndtere omlastingen når SW er klar
-    updateServiceWorker(true);
+    try {
+      // Send eksplisitt melding til service worker
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        console.log('Sender SKIP_WAITING melding til service worker');
+        navigator.serviceWorker.controller.postMessage({ 
+          type: 'SKIP_WAITING' 
+        });
+        
+        // Lyt etter at service worker er aktivert
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('Service worker controller endret - laster siden på nytt');
+          window.location.reload();
+        }, { once: true });
+      } else {
+        // Fallback til standard updateServiceWorker
+        console.log('Bruker standard updateServiceWorker');
+        await updateServiceWorker(true);
+      }
+      
+      // Skjul dialogen umiddelbart
+      setShowReloadPrompt(false);
+      setNeedRefresh(false);
+      
+    } catch (error) {
+      console.error('Feil ved oppdatering av service worker:', error);
+      // Vis dialogen igjen hvis noe går galt
+      setShowReloadPrompt(true);
+    }
   };
 
   const closeUpdatePrompt = () => {
     setShowReloadPrompt(false);
+    setNeedRefresh(false);
   };
 
   return (
