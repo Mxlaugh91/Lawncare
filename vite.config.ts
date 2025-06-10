@@ -19,7 +19,7 @@ export default defineConfig({
       swSrc: 'src',
       
       // DESTINASJON: Navn på den ferdige service worker-filen i 'dist'-mappen.
-      swDest: 'sw.js', 
+      filename: 'sw.js', 
       
       // VI FJERNER 'workbox'-OBJEKTET HERFRA.
       // All runtime-caching-logikk ligger nå i din sw.js-fil.
