@@ -69,18 +69,12 @@ function PwaUpdater() {
   };
 
   // Simplified update approach - close all tabs and reload
-  const handleUpdateClick = () => {
-    console.log('🔄 Update button clicked');
-    
-    // Hide the prompt
-    setNeedRefresh(false);
-    
-    // Show user message and instruction
-    const confirmed = window.confirm(
-      'For å fullføre oppdateringen må alle faner av appen lukkes og åpnes på nytt.\n\n' +
-      'Klikk OK for å lukke denne fanen. Åpne deretter appen på nytt for å se den oppdaterte versjonen.\n\n' +
-      '(Hvis du har flere faner åpne med appen, lukk dem også)'
-    );
+const handleUpdateClick = () => {
+  updateServiceWorker(true);
+  setTimeout(() => {
+    window.location.reload();
+  }, 100);
+};
     
     if (confirmed) {
       // Try to close the tab/window
