@@ -35,7 +35,8 @@ jobs:
         run: npm ci
 
       - name: DEBUG - List files before build
-        run: ls -la
+        run: cat vite.config.js
+        
 
       - name: Bygg prosjektet
         run: npm run build
