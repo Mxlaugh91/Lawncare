@@ -18,13 +18,6 @@ cleanupOutdatedCaches();
 // self.__WB_MANIFEST er plassholderen som vite-plugin-pwa fyller ut.
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-
-// ------------------------------------------------------------------------------------------
-// RUNTIME CACHING-REGLER
-// Siden vi bruker injectManifest-strategien, må vi definere alle
-// runtime-caching-regler manuelt her.
-// ------------------------------------------------------------------------------------------
-
 // Regel for Firestore API-kall: Prøv nettverk først, fall tilbake på cache.
 registerRoute(
   ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
