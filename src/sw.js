@@ -6,15 +6,12 @@ import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-try {
-  console.log('SW: Før cleanupOutdatedCaches(). Timestamp:', Date.now());
-  cleanupOutdatedCaches();
-  console.log('SW: Etter cleanupOutdatedCaches(). Timestamp:', Date.now());
-} catch (error) {
-  console.error('SW: Feil under cleanupOutdatedCaches():', error);
-}
+cleanupOutdatedCaches();
 
-// Firestore cache-strategi (beholdes)
+// Forhåndscacher alle ressurser (HTML, JS, CSS etc.) definert i manifestet.
+precacheAndRoute(self.__WB_MANIFEST || []);
+
+// Regel for Firestore API-kall
 registerRoute(
   ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
@@ -31,61 +28,64 @@ registerRoute(
   })
 );
 
+// ------------------------------------------------------------------------------------------
 // SERVICE WORKER LIFECYCLE FOR UMIDDELBAR AKTIVERING
+// ------------------------------------------------------------------------------------------
 
+// Install: Ikke vent på den gamle service workeren
 self.addEventListener('install', (event) => {
-  console.log('SW: install event - START. Timestamp:', Date.now());
-  
-  // MIDLERTIDIG UTKOMMENTERT FOR TEST: Workbox precaching
-  // console.log('SW: install event - Kaller precacheAndRoute (Workbox vil håndtere waitUntil).');
-  // precacheAndRoute(self.__WB_MANIFEST || []); 
-  // console.log('SW: install event - precacheAndRoute kall fullført (Workbox opererer asynkront).');
-  console.log('SW: install event - precacheAndRoute er UTKOMMENTERT FOR TEST.');
-
-
-  console.log('SW: install event - Kaller self.skipWaiting().');
+  console.log('SW: Service worker installert');
+  // KRITISK: Aktiver umiddelbart uten å vente
   self.skipWaiting();
-  console.log('SW: install event - self.skipWaiting() kalt.');
-  console.log('SW: install event - END.');
 });
 
+// Activate: Ta kontroll over alle klienter umiddelbart
 self.addEventListener('activate', (event) => {
-  console.log('SW: ACTIVATE event har startet. Timestamp:', Date.now()); 
+  console.log('SW: Service worker aktivert');
+  
   event.waitUntil(
+    // Ta kontroll over alle åpne tabs/vinduer umiddelbart
     self.clients.claim().then(() => {
-      console.log('SW: ACTIVATE - clients.claim() SUKSESS.');
+      console.log('SW: Ny service worker har tatt kontroll over alle klienter');
+      
+      // Send melding til alle klienter om at ny SW er aktiv
       return self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
-          console.log('SW: ACTIVATE - Sender SW_ACTIVATED til client ID:', client.id);
           client.postMessage({
             type: 'SW_ACTIVATED',
             payload: 'Ny service worker er aktiv og har tatt kontroll'
           });
         });
       });
-    }).catch(err => {
-      console.error('SW: ACTIVATE - FEIL i clients.claim() eller under sending av SW_ACTIVATED:', err);
     })
   );
-  console.log('SW: ACTIVATE event - waitUntil satt opp, fullfører activate event logisk.');
 });
 
+// Message handling for eksplisitt SKIP_WAITING
 self.addEventListener('message', (event) => {
-  console.log('SW: Mottok melding (full data):', JSON.stringify(event.data));
+  console.log('SW: Mottok melding:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    const messageId = event.data.id || 'INGEN_ID'; 
-    console.log(`SW: SKIP_WAITING melding mottatt (ID: ${messageId}) - kaller self.skipWaiting()`);
+    console.log('SW: SKIP_WAITING melding mottatt - tvinger aktivering');
+    
+    // Force skipWaiting og ta kontroll
     self.skipWaiting();
+    
+    // Ta kontroll over alle klienter umiddelbart
+    self.clients.claim().then(() => {
+      console.log('SW: Tvunget aktivering fullført');
+    });
   }
 });
 
+// Error handling
 self.addEventListener('error', (event) => {
-  console.error('SW: Service worker error:', event.error, 'Linje:', event.lineno, 'Fil:', event.filename);
+  console.error('SW: Service worker error:', event.error);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
   console.error('SW: Unhandled promise rejection:', event.reason);
+  event.preventDefault();
 });
 
-console.log('SW (public/sw.js TEST - NO PRECACHE) - PlenPilot Service Worker er lastet og kjører!');
+console.log('PlenPilot Service Worker (Force Activate Mode) er lastet og kjører!');
