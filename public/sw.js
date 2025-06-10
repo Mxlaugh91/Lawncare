@@ -6,7 +6,6 @@ import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// Workbox precaching and routing
 try {
   console.log('SW: Før cleanupOutdatedCaches(). Timestamp:', Date.now());
   cleanupOutdatedCaches();
@@ -15,26 +14,7 @@ try {
   console.error('SW: Feil under cleanupOutdatedCaches():', error);
 }
 
-// Global try-catch for precacheAndRoute som anbefalt av Workbox for debugging
-// self.addEventListener('install', (event) => {
-//   event.waitUntil(
-//     (async () => {
-//       try {
-//         console.log('SW: install event - Før precacheAndRoute. Timestamp:', Date.now());
-//         await precacheAndRoute(self.__WB_MANIFEST || []);
-//         console.log('SW: install event - Etter precacheAndRoute SUKSESS. Timestamp:', Date.now());
-//       } catch (error) {
-//         console.error('SW: install event - FEIL under precacheAndRoute:', error);
-//         // Hvis precaching feiler, kan vi velge å ikke la SW installere
-//         // ved å kaste feilen videre eller ikke kalle skipWaiting.
-//         // For nå, logger vi bare.
-//       }
-//     })()
-//   );
-// });
-// Ovenstående async/await i install er mer presis, men for nå bruker vi den enklere logikken under for å se når install event faktisk starter og slutter
-
-
+// Firestore cache-strategi (beholdes)
 registerRoute(
   ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
@@ -55,15 +35,13 @@ registerRoute(
 
 self.addEventListener('install', (event) => {
   console.log('SW: install event - START. Timestamp:', Date.now());
-  try {
-    // La Workbox håndtere sin egen precaching innenfor sin egen logikk
-    // Den vil automatisk legge til `event.waitUntil` for precaching.
-    console.log('SW: install event - Kaller precacheAndRoute (Workbox vil håndtere waitUntil).');
-    precacheAndRoute(self.__WB_MANIFEST || []); 
-    console.log('SW: install event - precacheAndRoute kall fullført (Workbox opererer asynkront).');
-  } catch (error) {
-    console.error('SW: install event - SYNKRON FEIL ved kall til precacheAndRoute (uvanlig):', error);
-  }
+  
+  // MIDLERTIDIG UTKOMMENTERT FOR TEST: Workbox precaching
+  // console.log('SW: install event - Kaller precacheAndRoute (Workbox vil håndtere waitUntil).');
+  // precacheAndRoute(self.__WB_MANIFEST || []); 
+  // console.log('SW: install event - precacheAndRoute kall fullført (Workbox opererer asynkront).');
+  console.log('SW: install event - precacheAndRoute er UTKOMMENTERT FOR TEST.');
+
 
   console.log('SW: install event - Kaller self.skipWaiting().');
   self.skipWaiting();
@@ -110,4 +88,4 @@ self.addEventListener('unhandledrejection', (event) => {
   console.error('SW: Unhandled promise rejection:', event.reason);
 });
 
-console.log('SW (public/sw.js) - PlenPilot Service Worker (Force Activate Mode med detaljert logging) er lastet og kjører!');
+console.log('SW (public/sw.js TEST - NO PRECACHE) - PlenPilot Service Worker er lastet og kjører!');
