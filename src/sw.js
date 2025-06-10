@@ -1,5 +1,5 @@
 // src/sw.js
-// Dette er kilde-Service Worker filen som vite-plugin-pwa vil prosessere.
+// Fixed Service Worker for vite-plugin-pwa injectManifest strategy
 
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
@@ -7,17 +7,16 @@ import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-console.log('SW (src/sw.js) - Toppnivå: Kilde Service Worker er lastet og starter evaluering. Timestamp:', Date.now());
+console.log('SW: Service Worker is loading. Timestamp:', Date.now());
 
-try {
-  console.log('SW: Før cleanupOutdatedCaches(). Timestamp:', Date.now());
-  cleanupOutdatedCaches();
-  console.log('SW: Etter cleanupOutdatedCaches(). Timestamp:', Date.now());
-} catch (error) {
-  console.error('SW: Feil under cleanupOutdatedCaches():', error);
-}
+// Clean up old caches
+cleanupOutdatedCaches();
 
-// Firestore cache-strategi
+// Precache all assets defined in the manifest
+// This is the REQUIRED line for injectManifest - it must appear exactly once
+precacheAndRoute(self.__WB_MANIFEST);
+
+// Register Firestore cache strategy
 registerRoute(
   ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
@@ -25,7 +24,7 @@ registerRoute(
     plugins: [
       new ExpirationPlugin({
         maxEntries: 50,
-        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dager
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
       }),
       new CacheableResponsePlugin({
         statuses: [200],
@@ -34,69 +33,54 @@ registerRoute(
   })
 );
 
-// SERVICE WORKER LIFECYCLE EVENTS
-// Disse må være registrert på toppnivå for å unngå "Event handler of '...' event must be added on the initial evaluation" advarsler.
-
+// Install event
 self.addEventListener('install', (event) => {
-  console.log('SW: install event - START. Timestamp:', Date.now());
-  
-  try {
-    // Workbox vil håndtere `event.waitUntil` for precaching internt.
-    // self.__WB_MANIFEST vil bli erstattet av vite-plugin-pwa med det faktiske manifestet.
-    console.log('SW: install event - Kaller precacheAndRoute med self.__WB_MANIFEST.');
-    precacheAndRoute(self.__WB_MANIFEST || []); 
-    console.log('SW: install event - precacheAndRoute kall fullført (Workbox opererer asynkront).');
-  } catch (error) {
-    // Dette vil fange synkrone feil ved selve kallet til precacheAndRoute, noe som er uvanlig.
-    // Asynkrone feil under selve precaching-prosessen håndteres vanligvis internt av Workbox.
-    console.error('SW: install event - SYNKRON FEIL ved kall til precacheAndRoute:', error);
-  }
-
-  console.log('SW: install event - Kaller self.skipWaiting().');
+  console.log('SW: Install event started. Timestamp:', Date.now());
   self.skipWaiting();
-  console.log('SW: install event - self.skipWaiting() kalt.');
-  console.log('SW: install event - END.');
+  console.log('SW: Install event completed.');
 });
 
+// Activate event
 self.addEventListener('activate', (event) => {
-  console.log('SW: ACTIVATE event har startet. Timestamp:', Date.now()); 
+  console.log('SW: Activate event started. Timestamp:', Date.now());
   event.waitUntil(
     self.clients.claim().then(() => {
-      console.log('SW: ACTIVATE - clients.claim() SUKSESS.');
+      console.log('SW: Clients claimed successfully.');
       return self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
-          console.log('SW: ACTIVATE - Sender SW_ACTIVATED til client ID:', client.id);
+          console.log('SW: Sending SW_ACTIVATED message to client:', client.id);
           client.postMessage({
             type: 'SW_ACTIVATED',
-            payload: 'Ny service worker er aktiv og har tatt kontroll'
+            payload: 'New service worker is active and has taken control'
           });
         });
       });
     }).catch(err => {
-      console.error('SW: ACTIVATE - FEIL i clients.claim() eller under sending av SW_ACTIVATED:', err);
+      console.error('SW: Error during activation:', err);
     })
   );
-  console.log('SW: ACTIVATE event - waitUntil satt opp, fullfører activate event logisk.');
+  console.log('SW: Activate event setup completed.');
 });
 
+// Message event handler
 self.addEventListener('message', (event) => {
-  console.log('SW: Mottok melding (full data):', JSON.stringify(event.data));
+  console.log('SW: Message received:', JSON.stringify(event.data));
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    const messageId = event.data.id || 'INGEN_ID'; 
-    console.log(`SW: SKIP_WAITING melding mottatt (ID: ${messageId}) - kaller self.skipWaiting()`);
-    self.skipWaiting(); // Viktig for å la den ventende SW ta over raskere ved melding fra klienten
+    const messageId = event.data.id || 'NO_ID';
+    console.log(`SW: SKIP_WAITING message received (ID: ${messageId}) - calling self.skipWaiting()`);
+    self.skipWaiting();
   }
 });
 
+// Error event handlers
 self.addEventListener('error', (event) => {
-  console.error('SW: Service worker error:', event.error, 'Linje:', event.lineno, 'Fil:', event.filename);
+  console.error('SW: Service worker error:', event.error, 'Line:', event.lineno, 'File:', event.filename);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
-  // Forhindrer at ubehandlede promise rejections i SW krasjer den (i noen nettlesere)
   console.error('SW: Unhandled promise rejection:', event.reason);
-  event.preventDefault(); // Vurder om dette er nødvendig for din bruk
+  event.preventDefault();
 });
 
-console.log('SW (src/sw.js) - PlenPilot Kilde Service Worker er ferdig evaluert. Timestamp:', Date.now());
+console.log('SW: PlenPilot Service Worker evaluation completed. Timestamp:', Date.now());
