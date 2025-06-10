@@ -57,13 +57,11 @@ jobs:
 
       - name: DEBUG - List dist folder contents and sw.js
         run: |
-          echo "--- Listing contents of dist/ folder: ---"
-          ls -la dist
-          echo ""
-          echo "--- Checking for dist/sw.js: ---"
-          ls -la dist/sw.js
-        # Bruk dette for å unngå at hele jobben feiler hvis filen ikke finnes
-        continue-on-error: true
+          echo "Listing dist folder:"
+          ls -R dist
+          echo "Contents of dist/sw.js:"
+          cat dist/sw.js # This will print the generated sw.js to the Action logs
+
 
   # Jobb 2: Publisere til GitHub Pages
   deploy:
