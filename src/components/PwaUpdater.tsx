@@ -43,7 +43,7 @@ function PwaUpdater() {
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
+    updateServiceWorker, // Vi trenger fortsatt denne i scope, selv om vi kommenterer ut kallet
   } = useRegisterSW({
     onRegistered(r) {
       console.log('PwaUpdater: SW registrert:', r);
@@ -63,7 +63,6 @@ function PwaUpdater() {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'SW_ACTIVATED') {
         console.log('PwaUpdater: Mottok SW_ACTIVATED fra service worker.');
-        // MIDLERTIDIG DEAKTIVERT FOR FEILSØKING:
         console.log('PwaUpdater: SW_ACTIVATED - Reload-logikk er midlertidig deaktivert for test.');
         /*
         if (!isReloadingForUpdate) {
@@ -88,7 +87,7 @@ function PwaUpdater() {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [isReloadingForUpdate]); // Viktig dependency
+  }, [isReloadingForUpdate]);
 
   useEffect(() => {
     if (needRefresh && !isUpdating && !isReloadingForUpdate) {
@@ -142,7 +141,6 @@ function PwaUpdater() {
   };
 
   const handleUpdateClick = async () => {
-    // VIKTIG LOGG: Sjekk om denne kalles én eller to ganger
     const clickTimestamp = Date.now();
     console.log(`PwaUpdater: handleUpdateClick ENTERED. Timestamp: ${clickTimestamp}. isUpdating: ${isUpdating}, needRefresh: ${needRefresh}, isReloadingForUpdate: ${isReloadingForUpdate}`);
     
@@ -192,8 +190,9 @@ function PwaUpdater() {
         }
       }, 7000); 
 
-      console.log(`PwaUpdater (${clickTimestamp}): Kaller updateServiceWorker(false) for å resette PWA state.`);
-      await updateServiceWorker(false); 
+      // TEST: Kommenter ut kallet til updateServiceWorker(false)
+      console.log(`PwaUpdater (${clickTimestamp}): updateServiceWorker(false) vil IKKE bli kalt (test).`);
+      // await updateServiceWorker(false); // <--- KOMMENTERT UT FOR TEST
 
     } catch (error) {
       console.error(`PwaUpdater (${clickTimestamp}): Feil under handleUpdateClick:`, error);
