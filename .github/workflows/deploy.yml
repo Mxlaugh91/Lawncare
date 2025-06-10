@@ -1,24 +1,17 @@
-# Navnet på arbeidsflyten som vises i "Actions"-fanen på GitHub
 name: Deploy to GitHub Pages
 
-# Styrer når denne arbeidsflyten skal kjøre
 on:
-  # Kjør HVER GANG noen pusher kode til "main"-branchen
   push:
     branches:
       - main
-  # Tillater manuell kjøring fra "Actions"-fanen
   workflow_dispatch:
 
-# Tillatelser som arbeidsflyten trenger for å publisere
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Definerer jobbene som skal kjøres
 jobs:
-  # Jobb 1: Bygge prosjektet
   build:
     runs-on: ubuntu-latest
     steps:
@@ -29,25 +22,36 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # VIKTIG: Fjern cache midlertidig for å tvinge fresh install
+          # cache: 'npm'  # Kommenter ut denne linjen
 
-      - name: Installer avhengigheter
-        run: npm ci
-
-      - name: DEBUG - List files and check vite.config.ts
+      - name: Slett node_modules og package-lock
         run: |
-           echo "Searching for vite.config files..."
-           ls -la vite.config.* || echo "No vite.config.* files found with ls"
-           # Hvis du har 'find' tilgjengelig:
-           # find . -maxdepth 1 -name "vite.config.*" -print -exec echo "--- Content of {} ---" \; -exec cat {} \; -exec echo "--- End of {} ---" \;
-        
+          rm -rf node_modules
+          rm -f package-lock.json
+
+      - name: Installer avhengigheter (fresh install)
+        run: |
+          npm cache clean --force
+          npm install  # Bruk install i stedet for ci for å regenerere lock file
+
+      - name: DEBUG - Sjekk vite config og sw.js plassering
+        run: |
+          echo "=== Checking vite.config.ts ==="
+          grep -n "swSrc" vite.config.ts || echo "swSrc not found in vite.config.ts"
+          echo ""
+          echo "=== Checking for sw.js files ==="
+          find . -name "sw.js" -type f | grep -v node_modules
+          echo ""
+          echo "=== Content of src/sw.js (first 20 lines) ==="
+          head -20 src/sw.js || echo "src/sw.js not found"
+          echo ""
+          echo "=== Checking node_modules vite-plugin-pwa version ==="
+          npm list vite-plugin-pwa
 
       - name: Bygg prosjektet
         run: npm run build
         env:
-          # --- KORREKSJON HER ---
-          # Map ALLE dine GitHub Secrets til VITE_ miljøvariabler.
-          # Dette sikrer at Vite har tilgang til dem under byggeprosessen.
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -60,15 +64,6 @@ jobs:
         with:
           path: ./dist
 
-      - name: DEBUG - List dist folder contents and sw.js
-        run: |
-          echo "Listing dist folder:"
-          ls -R dist
-          echo "Contents of dist/sw.js:"
-          cat dist/sw.js # This will print the generated sw.js to the Action logs
-
-
-  # Jobb 2: Publisere til GitHub Pages
   deploy:
     needs: build
     runs-on: ubuntu-latest
