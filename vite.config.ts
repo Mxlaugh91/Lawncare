@@ -11,12 +11,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      injectRegister: false, // We handle registration manually in PwaUpdater
-      
-      // Use injectManifest strategy with our custom service worker
+      injectRegister: false,
       strategies: 'injectManifest',
-      swSrc: 'src/sw.js',
-      swDest: 'dist/sw.js',
+      
+      // VIKTIG: Disse MÅ være inne i injectManifest objektet!
+      injectManifest: {
+        swSrc: 'src/sw.js',
+        swDest: 'sw.js',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       
       devOptions: {
         enabled: true,
