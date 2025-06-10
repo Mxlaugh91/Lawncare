@@ -1,4 +1,6 @@
-import path from 'path'; // <<< MAKE SURE THIS IS AT THE TOP WITH OTHER IMPORTS
+// vite.config.js
+
+import path from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -9,51 +11,28 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      injectRegister: 'auto',
+      
+      // STRATEGI: Vi velger 'injectManifest' for å bruke vår egen service worker-fil.
+      strategies: 'injectManifest',
 
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
-
-      // Add custom service worker handling
-      injectManifest: { // <<< This is a property of the VitePWA options object
-        // swSrc: 'public/sw.js', // Original
-        swSrc: path.resolve(process.cwd(), 'public/sw.js'), // MODIFIED: Use absolute path
-        swDest: 'sw.js',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      },
-      // The lines like "// vite.config.ts - TEMPORARY DEBUG" and "// ..."
-      // that were here previously were causing the syntax error.
-      // They should not be inside this VitePWA options object.
-
-      workbox: {
-        // globPatterns: ['**/*.{js,css,html,ico,png,svg}'], // Optional: can be removed when injectManifest.globPatterns is used
-        skipWaiting: true,
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/firestore\.googleapis\.com/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'firestore-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [200],
-              },
-            },
-          },
-        ],
-      },
+      // STI TIL SERVICE WORKER: Peker på din egendefinerte fil i public-mappen.
+      swSrc: 'public/sw.js',
+      
+      // DESTINASJON: Navn på den ferdige service worker-filen i 'dist'-mappen.
+      swDest: 'sw.js', 
+      
+      // VI FJERNER 'workbox'-OBJEKTET HERFRA.
+      // All runtime-caching-logikk ligger nå i din sw.js-fil.
 
       devOptions: {
-        enabled: false,
+        enabled: true, // Anbefales for å kunne teste service worker under utvikling
+        type: 'module',
       },
+      
+      // DITT MANIFEST: Dette er uendret og ser bra ut.
       manifest: {
         id: '/Lawncare/',
         name: 'PlenPilot',
-        // ... rest of your manifest
         short_name: 'PlenPilot',
         description: 'A maintenance management application for lawn care.',
         theme_color: '#22c55e',
