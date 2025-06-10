@@ -52,8 +52,9 @@ registerRoute(
 // Lytter etter meldinger fra klienten (din PwaUpdater-komponent)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW: Mottok SKIP_WAITING-melding, aktiverer ny service worker.');
-    self.skipWaiting();
+    console.log('SW: Mottok SKIP_WAITING-melding fra klient');
+    // Siden vi allerede har self.skipWaiting() øverst, trenger vi ikke å kalle det igjen her
+    // Den nye service worker-en vil automatisk aktiveres
   }
 });
 
