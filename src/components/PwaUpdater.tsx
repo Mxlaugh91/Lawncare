@@ -103,15 +103,19 @@ function PwaUpdater() {
       setIsUpdating(true);
       setShowReloadPrompt(false);
       
-      // KRITISK for prompt-modus: Kall updateServiceWorker med reloadPage=true
       console.log('Kaller updateServiceWorker(true) - dette skal aktivere ny SW og reloade');
+      
+      // For prompt-modus er dette den riktige måten
       await updateServiceWorker(true);
       
-      // Hvis vi kommer hit uten reload, noe gikk galt - force reload
-      console.log('updateServiceWorker returnerte uten reload - tvinger reload');
+      // Hvis updateServiceWorker ikke automatisk reloader, gjør det manuelt
+      console.log('updateServiceWorker fullført - sjekker om reload er nødvendig');
       setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        if (!document.hidden) { // Bare reload hvis vinduet er synlig
+          console.log('Tvinger reload siden updateServiceWorker ikke gjorde det automatisk');
+          window.location.reload();
+        }
+      }, 2000);
       
     } catch (error) {
       console.error('Feil ved oppdatering av service worker:', error);
@@ -119,7 +123,11 @@ function PwaUpdater() {
       setIsUpdating(false);
       setShowReloadPrompt(false);
       setNeedRefresh(false);
-      window.location.reload();
+      
+      // Forsinket reload for å unngå race conditions
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     }
   };
 
