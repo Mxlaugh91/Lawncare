@@ -13,12 +13,16 @@ export default defineConfig({
 
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
 
-      // Add custom service worker handling
-      injectManifest: {
-        swSrc: 'public/sw.js', // We'll create this file
-        swDest: 'sw.js',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      },
+// vite.config.ts - TEMPORARY DEBUG
+import path from 'path'; // Ensure path is imported
+// ...
+injectManifest: {
+  // swSrc: 'public/sw.js', // Original
+  swSrc: path.resolve(process.cwd(), 'public/sw.js'), // Try this
+  swDest: 'sw.js',
+  globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+},
+// ...
 
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
