@@ -7,8 +7,9 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { clientsClaim } from 'workbox-core';
 
-// Lar den nye service workeren ta kontroll over åpne sider (klienter) umiddelbart.
-clientsClaim();
+// KRITISK for prompt-modus: Ikke kall clientsClaim() automatisk
+// clientsClaim(); // KOMMENTERT UT
+
 cleanupOutdatedCaches();
 
 // Forhåndscacher alle ressurser (HTML, JS, CSS etc.) definert i manifestet.
@@ -33,29 +34,52 @@ registerRoute(
 );
 
 // ------------------------------------------------------------------------------------------
-// EGENDEFINERT SERVICE WORKER-LOGIKK
+// PROMPT-MODUS SERVICE WORKER LOGIKK
 // ------------------------------------------------------------------------------------------
 
-// Håndter install event
+// Håndter install event for prompt-modus
 self.addEventListener('install', (event) => {
   console.log('SW: Service worker installert');
-  // La vite-plugin-pwa håndtere install-logikken
+  // I prompt-modus skal vi IKKE kalle skipWaiting() automatisk
+  // Dette lar den gamle service worker fortsette til brukeren godkjenner oppdateringen
 });
 
-// Håndter activate event
+// Håndter activate event for prompt-modus  
 self.addEventListener('activate', (event) => {
   console.log('SW: Service worker aktivert');
-  // La vite-plugin-pwa håndtere activate-logikken
+  
+  // Kun ta kontroll når vi eksplisitt blir bedt om det
+  event.waitUntil(
+    clientsClaim().then(() => {
+      console.log('SW: Service worker har tatt kontroll over alle klienter');
+    })
+  );
 });
 
-// Enkel message handling (hovedsakelig for debugging)
+// Message handling for prompt-modus
 self.addEventListener('message', (event) => {
   console.log('SW: Mottok melding:', event.data);
   
-  // La vite-plugin-pwa håndtere meldinger
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW: SKIP_WAITING melding mottatt');
+    console.log('SW: SKIP_WAITING melding mottatt - aktiverer ny service worker');
+    
+    // Nå kan vi trygt kalle skipWaiting siden brukeren har godkjent
     self.skipWaiting();
+    
+    // Ta kontroll over alle klienter
+    self.clients.claim().then(() => {
+      console.log('SW: Ny service worker har tatt kontroll');
+      
+      // Send melding tilbake om vellykket oppdatering
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SW_ACTIVATED',
+            payload: 'Service worker oppdatert og aktivert'
+          });
+        });
+      });
+    });
   }
 });
 
@@ -68,4 +92,4 @@ self.addEventListener('unhandledrejection', (event) => {
   console.error('SW: Unhandled promise rejection:', event.reason);
 });
 
-console.log('PlenPilot Service Worker er lastet og kjører!');
+console.log('PlenPilot Service Worker (Prompt Mode) er lastet og kjører!');
