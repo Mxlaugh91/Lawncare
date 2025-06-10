@@ -49,7 +49,7 @@ function PwaUpdater() {
       if (r) {
         setInterval(() => {
           r.update();
-        }, 60 * 60 * 1000); // Sjekker for oppdateringer hver time
+        }, 60 * 1000); // Sjekker for oppdateringer hver time
       }
     },
     onRegisterError(error) {
