@@ -1,4 +1,4 @@
-// vite.config.js
+// vite.config.ts
 
 import path from 'path';
 import react from '@vitejs/plugin-react';
@@ -10,21 +10,22 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
       
-      // STRATEGI: Vi velger 'injectManifest' for å bruke vår egen service worker-fil.
+      // Use injectManifest strategy with correct source path
       strategies: 'injectManifest',
-      swSrc: 'src/sw.js',
+      srcDir: 'src',
+      filename: 'sw.js',
       
-      // VI FJERNER 'workbox'-OBJEKTET HERFRA.
-      // All runtime-caching-logikk ligger nå i din sw.js-fil.
-
       devOptions: {
-        enabled: true, // Anbefales for å kunne teste service worker under utvikling
+        enabled: true,
         type: 'module',
       },
       
-      // DITT MANIFEST: Dette er uendret og ser bra ut.
+      // Make sure to include assets
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
+      
       manifest: {
         id: '/Lawncare/',
         name: 'PlenPilot',
