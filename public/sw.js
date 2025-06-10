@@ -7,12 +7,11 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { clientsClaim } from 'workbox-core';
 
-// Aktiverer nye versjoner av service workeren umiddelbart.
 
 // Lar den nye service workeren ta kontroll over åpne sider (klienter) umiddelbart.
 clientsClaim();
 
-// Rydder opp i gamle cacher fra tidligere versjoner.
+
 cleanupOutdatedCaches();
 
 // Forhåndscacher alle ressurser (HTML, JS, CSS etc.) definert i manifestet.
