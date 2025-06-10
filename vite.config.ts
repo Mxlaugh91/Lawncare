@@ -14,12 +14,7 @@ export default defineConfig({
       
       // STRATEGI: Vi velger 'injectManifest' for å bruke vår egen service worker-fil.
       strategies: 'injectManifest',
-
-      // STI TIL SERVICE WORKER: Peker på din egendefinerte fil i public-mappen.
-      srcDir: 'src',
-      
-      // DESTINASJON: Navn på den ferdige service worker-filen i 'dist'-mappen.
-      filename: 'sw.js', 
+      swSrc: 'src/sw.js',
       
       // VI FJERNER 'workbox'-OBJEKTET HERFRA.
       // All runtime-caching-logikk ligger nå i din sw.js-fil.
