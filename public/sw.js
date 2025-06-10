@@ -8,10 +8,8 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 cleanupOutdatedCaches();
 
-// Forhåndscacher alle ressurser (HTML, JS, CSS etc.) definert i manifestet.
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Regel for Firestore API-kall
 registerRoute(
   ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
@@ -28,59 +26,56 @@ registerRoute(
   })
 );
 
-// ------------------------------------------------------------------------------------------
 // SERVICE WORKER LIFECYCLE FOR UMIDDELBAR AKTIVERING
-// ------------------------------------------------------------------------------------------
 
-// Install: Ikke vent på den gamle service workeren
 self.addEventListener('install', (event) => {
-  console.log('SW: Service worker installert');
+  console.log('SW: Service worker installert (install event).');
   // KRITISK: Aktiver umiddelbart uten å vente
-  self.skipWaiting();
+  // Dette vil trigge 'activate'-eventet så snart installasjonen er fullført.
+  self.skipWaiting(); 
 });
 
-// Activate: Ta kontroll over alle klienter umiddelbart
 self.addEventListener('activate', (event) => {
-  console.log('SW: Service worker aktivert');
-  
+  console.log('SW: Activate event STARTET.'); // MER DETALJERT LOGGING
   event.waitUntil(
-    // Ta kontroll over alle åpne tabs/vinduer umiddelbart
     self.clients.claim().then(() => {
-      console.log('SW: Ny service worker har tatt kontroll over alle klienter');
-      
-      // Send melding til alle klienter om at ny SW er aktiv
+      console.log('SW: clients.claim() SUKSESS. Ny service worker har tatt kontroll over alle klienter.'); // MER DETALJERT LOGGING
       return self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
+          console.log('SW: Sender SW_ACTIVATED til client ID:', client.id); // MER DETALJERT LOGGING
           client.postMessage({
             type: 'SW_ACTIVATED',
             payload: 'Ny service worker er aktiv og har tatt kontroll'
           });
         });
       });
+    }).catch(err => {
+      console.error('SW: FEIL i clients.claim() eller under sending av SW_ACTIVATED:', err); // MER DETALJERT LOGGING
     })
   );
+  console.log('SW: Activate event waitUntil satt opp, fullfører activate event.'); // MER DETALJERT LOGGING
 });
 
-// Message handling for eksplisitt SKIP_WAITING
 self.addEventListener('message', (event) => {
-  console.log('SW: Mottok melding:', event.data);
+  // Logg hele meldingen for å se strukturen og om 'id' er tilstede
+  console.log('SW: Mottok melding (full data):', JSON.stringify(event.data));
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW: SKIP_WAITING melding mottatt - tvinger aktivering');
-    
-    // Kun kall skipWaiting - activate event vil håndtere clients.claim()
+    const messageId = event.data.id || 'INGEN_ID'; // Håndter hvis ID mangler
+    console.log(`SW: SKIP_WAITING melding mottatt (ID: ${messageId}) - kaller self.skipWaiting()`);
+    // Kall self.skipWaiting() her. Selv om den også kalles i 'install',
+    // sikrer dette at SW reagerer hvis den av en eller annen grunn fortsatt er i 'waiting'.
     self.skipWaiting();
   }
 });
 
-// Error handling
 self.addEventListener('error', (event) => {
-  console.error('SW: Service worker error:', event.error);
+  console.error('SW: Service worker error:', event.error, 'Linje:', event.lineno, 'Fil:', event.filename);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
   console.error('SW: Unhandled promise rejection:', event.reason);
-  event.preventDefault();
+  // event.preventDefault(); // Vurder om dette er nødvendig
 });
 
-console.log('PlenPilot Service Worker (Force Activate Mode) er lastet og kjører!');
+console.log('PlenPilot Service Worker (Force Activate Mode med detaljert logging) er lastet og kjører!');
