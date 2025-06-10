@@ -1,4 +1,4 @@
-// vite.config.ts
+// vite.config.ts - Complete working configuration
 
 import path from 'path';
 import react from '@vitejs/plugin-react';
@@ -10,20 +10,20 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      registerType: 'prompt',
+      injectRegister: false, // We handle registration manually in PwaUpdater
       
-      // Use injectManifest strategy with correct source path
+      // Use injectManifest strategy with our custom service worker
       strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.js',
+      swSrc: 'src/sw.js',
+      swDest: 'dist/sw.js',
       
       devOptions: {
         enabled: true,
         type: 'module',
       },
       
-      // Make sure to include assets
+      // Include assets for precaching
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
       
       manifest: {
