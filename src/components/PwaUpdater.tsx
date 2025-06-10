@@ -33,6 +33,13 @@ function PwaUpdater() {
     onRegisterError(error) {
       console.log('SW registreringsfeil:', error);
     },
+    // KRITISK: Denne callback-en utløses når den nye service worker-en er aktivert
+    onUpdated() {
+      console.log('SW oppdatert og aktivert - laster siden på nytt');
+      // Nå er den nye service worker-en aktivert og har tatt kontroll
+      // Vi kan trygt laste siden på nytt
+      window.location.reload();
+    },
   });
 
   // onNeedRefresh og onOfflineReady vil bli trigget av useRegisterSW.
@@ -83,13 +90,13 @@ function PwaUpdater() {
   };
 
   const handleUpdateClick = () => {
-    // Denne funksjonen sender 'SKIP_WAITING'-meldingen til din sw.js.
+    console.log('Bruker trykket "Oppdater nå" - ber service worker om å aktivere seg');
+    // Skjul oppdateringsdialogen umiddelbart for bedre UX
+    setShowReloadPrompt(false);
+    
+    // Be den nye service worker-en om å aktivere seg
+    // onUpdated-callback-en vil håndtere omlastingen når SW er klar
     updateServiceWorker(true);
-    // Siden din sw.js har skipWaiting(), vil siden laste på nytt med en gang for å aktivere den nye versjonen.
-    // Vi legger til en liten forsinkelse for å sikre at service workeren rekker å aktivere.
-    setTimeout(() => {
-        window.location.reload();
-    }, 100);
   };
 
   const closeUpdatePrompt = () => {
@@ -110,7 +117,7 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Oppdaterings-dialog (uendret) */}
+      {/* Oppdaterings-dialog */}
       {showReloadPrompt && (
         <div className="fixed bottom-5 right-5 bg-blue-600 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up border-2 border-blue-700">
           <div className="flex items-center gap-3 mb-3">
