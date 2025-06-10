@@ -8,7 +8,6 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { clientsClaim } from 'workbox-core';
 
 // Aktiverer nye versjoner av service workeren umiddelbart.
-self.skipWaiting();
 
 // Lar den nye service workeren ta kontroll over åpne sider (klienter) umiddelbart.
 clientsClaim();
@@ -52,6 +51,7 @@ registerRoute(
 // Lytter etter meldinger fra klienten (din PwaUpdater-komponent)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
     console.log('SW: Mottok SKIP_WAITING-melding fra klient');
     // Siden vi allerede har self.skipWaiting() øverst, trenger vi ikke å kalle det igjen her
     // Den nye service worker-en vil automatisk aktiveres
