@@ -109,7 +109,7 @@ const LoginPage = () => {
           </form>
         </CardContent>
         <CardFooter className="text-center text-sm text-gray-500">
-          Ta kontakt med administrator
+          Ta kontakt med administrator for tilgang
         </CardFooter>
       </Card>
     </div>
