@@ -16,7 +16,7 @@ export default defineConfig({
       strategies: 'injectManifest',
 
       // STI TIL SERVICE WORKER: Peker på din egendefinerte fil i public-mappen.
-      swSrc: 'src',
+      srcDir: 'src',
       
       // DESTINASJON: Navn på den ferdige service worker-filen i 'dist'-mappen.
       filename: 'sw.js', 
