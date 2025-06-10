@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+  # Allow manual trigger from Actions tab
+  workflow_dispatch: # Add this to trigger it manually for testing
 
 # Tillatelser som arbeidsflyten trenger for å publisere
 permissions:
@@ -26,30 +28,50 @@ jobs:
       - name: Sett opp Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Bruker en nyere, stabil versjon av Node
+          node-version: '20' 
           cache: 'npm'
 
       - name: Installer avhengigheter
-        run: npm ci # 'ci' er raskere og sikrere for servere enn 'install'
+        run: npm ci 
+
+      - name: DEBUG - List files before build # <<< ADD THIS SECTION
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing all files recursively:"
+          ls -R
+          echo "Checking for public/sw.js:"
+          if [ -f public/sw.js ]; then
+            echo "FOUND: public/sw.js"
+          else
+            echo "NOT FOUND: public/sw.js"
+          fi
+          echo "Checking for vite.config.ts:"
+          if [ -f vite.config.ts ]; then
+            echo "FOUND: vite.config.ts"
+          else
+            echo "NOT FOUND: vite.config.ts"
+          fi
 
       - name: Bygg prosjektet
-        run: npm run build
-        env: # <-- Her er Regel 3! Vi gir hemmelighetene til byggeprosessen
+        run: npm run build # This is where vite-plugin-pwa runs
+        env: 
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          # ... other firebase env vars ...
+
+      - name: DEBUG - List dist folder contents and sw.js # <<< ADD THIS SECTION
+        run: |
+          echo "Listing dist folder:"
+          ls -R dist
+          echo "Contents of dist/sw.js:"
+          cat dist/sw.js # This will print the generated sw.js to the Action logs
 
       - name: Last opp bygge-resultatet (artifact)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # Vite legger den ferdige siden i en 'dist'-mappe
+          path: ./dist 
 
   # Jobb 2: Publisere til GitHub Pages
   deploy:
-    # Denne jobben er avhengig av at 'build'-jobben er ferdig
     needs: build
     runs-on: ubuntu-latest
     environment:
