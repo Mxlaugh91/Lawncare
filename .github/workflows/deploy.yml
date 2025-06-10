@@ -34,7 +34,7 @@ jobs:
       - name: Installer avhengigheter
         run: npm ci
 
-       - name: DEBUG - List files before build
+      - name: DEBUG - List files before build
         run: ls -la
 
       - name: Bygg prosjektet
@@ -55,7 +55,7 @@ jobs:
         with:
           path: ./dist
 
-        - name: DEBUG - List dist folder contents and sw.js
+      - name: DEBUG - List dist folder contents and sw.js
         run: |
           echo "--- Listing contents of dist/ folder: ---"
           ls -la dist
