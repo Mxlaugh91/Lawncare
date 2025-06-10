@@ -84,19 +84,32 @@ function PwaUpdater() {
     }
   };
 
-  // The RELIABLE update method
-  const handleUpdateClick = () => {
-    // Since skipWaiting is true, we just need to reload
-    updateServiceWorker(true); // This will trigger the SW update
-    // Give SW a moment to activate then reload
+ const handleUpdateClick = () => {
+    console.log('[PWA Updater] handleUpdateClick function initiated.');
+    if (!updateServiceWorker) {
+        console.error('[PWA Updater] updateServiceWorker function is not available!');
+        return;
+    }
+    console.log('[PWA Updater] Calling updateServiceWorker(true) to activate new SW.');
+    updateServiceWorker(true); // This tells the new SW to skip waiting and activate.
+                               // It sends a { type: 'SKIP_WAITING' } message to the SW.
+    console.log('[PWA Updater] updateServiceWorker(true) has been called.');
+    console.log('[PWA Updater] Setting timeout for window.location.reload() in 100ms.');
+    
     setTimeout(() => {
-      window.location.reload();
+      console.log('[PWA Updater] Timeout reached. Executing window.location.reload().');
+      try {
+        window.location.reload();
+      } catch (e) {
+        console.error('[PWA Updater] Error during window.location.reload():', e);
+      }
     }, 100);
   };
 
   const closeUpdatePrompt = () => {
+    console.log('[PWA Updater] closeUpdatePrompt called. Hiding reload prompt.');
     setShowReloadPrompt(false);
-    setNeedRefresh(false);
+
   };
 
   return (
