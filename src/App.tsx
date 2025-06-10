@@ -20,8 +20,8 @@ function App() {
 
   return (
     <HashRouter>
+      <PwaUpdater />
       <AuthProvider>
-        <PwaUpdater />
         <AppRoutes />
         <Toaster />
       </AuthProvider>

@@ -35,7 +35,7 @@ export default defineConfig({
         name: 'PlenPilot',
         short_name: 'PlenPilot',
         description: 'A maintenance management application for lawn care.',
-        theme_color: '#22c55e',
+        theme_color: '#f8fafc',
         background_color: '#f8fafc',
         display: 'standalone',
         scope: '/Lawncare/',
