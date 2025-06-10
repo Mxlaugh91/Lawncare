@@ -26,7 +26,7 @@ function PwaUpdater() {
       if (r) {
         setInterval(() => {
           r.update();
-        }, 60 * 60 * 1000);
+        }, 60 * 1000);
       }
     },
     onRegisterError(error) {
