@@ -1,4 +1,3 @@
-// src/components/PwaUpdater.tsx
 import { useState, useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
@@ -14,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 function PwaUpdater() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showReloadPrompt, setShowReloadPrompt] = useState(false);
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -21,13 +21,22 @@ function PwaUpdater() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
-      console.log('Service Worker registered:', r);
+      console.log('SW registered:', r);
+      // Check for updates every hour
+      if (r) {
+        setInterval(() => {
+          r.update();
+        }, 60 * 60 * 1000);
+      }
     },
     onRegisterError(error) {
-      console.log('Service Worker registration error:', error);
+      console.log('SW registration error:', error);
     },
     onNeedRefresh() {
-      console.log('🔄 New content available, will show update prompt');
+      console.log('🔄 New content available');
+      // Since we use skipWaiting: true, the new SW will activate immediately
+      // We just need to reload the page
+      setShowReloadPrompt(true);
     },
     onOfflineReady() {
       console.log('✅ App ready to work offline');
@@ -35,18 +44,21 @@ function PwaUpdater() {
   });
 
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Check if app is installed
+    if (window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true) {
       setIsInstalled(true);
     }
 
+    // Install prompt handling
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log('beforeinstallprompt event fired');
+      console.log('Install prompt available');
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     const handleAppInstalled = () => {
-      console.log('PWA was installed');
+      console.log('PWA installed');
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
@@ -62,42 +74,28 @@ function PwaUpdater() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
+    
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
-    setDeferredPrompt(null);
-  };
-
-  // Simplified update approach - close all tabs and reload
-const handleUpdateClick = () => {
-  updateServiceWorker(true);
-  setTimeout(() => {
-    window.location.reload();
-  }, 100);
-};
+    console.log(`Install prompt outcome: ${outcome}`);
     
-    if (confirmed) {
-      // Try to close the tab/window
-      if (window.opener) {
-        window.close(); // Close popup/tab opened by another window
-      } else {
-        // For main window, try to close or navigate away
-        try {
-          window.close();
-        } catch (e) {
-          // If we can't close (main tab), reload instead
-          window.location.reload();
-        }
-      }
-    } else {
-      // User cancelled, show the prompt again
-      setNeedRefresh(true);
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
     }
   };
 
+  // The RELIABLE update method
+  const handleUpdateClick = () => {
+    // Since skipWaiting is true, we just need to reload
+    updateServiceWorker(true); // This will trigger the SW update
+    // Give SW a moment to activate then reload
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
   const closeUpdatePrompt = () => {
-    console.log('❌ Closing update prompt');
-    setOfflineReady(false);
+    setShowReloadPrompt(false);
     setNeedRefresh(false);
   };
 
@@ -105,100 +103,25 @@ const handleUpdateClick = () => {
     <>
       {/* Install Prompt */}
       {!isInstalled && deferredPrompt && (
-        <div style={{
-          position: 'fixed',
-          bottom: needRefresh ? '140px' : '20px',
-          right: '20px',
-          background: '#22c55e',
-          color: 'white',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          zIndex: 9999,
-          maxWidth: '300px',
-        }}>
-          <div style={{ marginBottom: '8px' }}>
-            <span>Installer PlenPilot som app!</span>
+        <div className="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Installer PlenPilot</h3>
+              <p className="text-sm opacity-90">
+                Få rask tilgang og offline-støtte!
+              </p>
+            </div>
           </div>
-          <button 
-            onClick={handleInstallClick}
-            style={{ 
-              background: 'white', 
-              color: '#22c55e', 
-              border: 'none', 
-              padding: '6px 12px', 
-              borderRadius: '4px', 
-              marginRight: '8px', 
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
-          >
-            Installer
-          </button>
-          <button 
-            onClick={() => setDeferredPrompt(null)}
-            style={{ 
-              background: 'transparent', 
-              color: 'white', 
-              border: '1px solid white', 
-              padding: '6px 12px', 
-              borderRadius: '4px', 
-              cursor: 'pointer' 
-            }}
-          >
-            Ikke nå
-          </button>
-        </div>
-      )}
-
-      {/* Update Prompt */}
-      {needRefresh && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          background: '#3b82f6',
-          color: 'white',
-          padding: '16px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          zIndex: 10000,
-          maxWidth: '320px',
-          border: '2px solid #1d4ed8',
-        }}>
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>🔄 Ny versjon tilgjengelig!</div>
-            <span style={{ fontSize: '14px', opacity: 0.9 }}>
-              En oppdatering er klar. Lukk alle faner og åpne appen på nytt for å se den nyeste versjonen.
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-2 mt-3">
             <button 
-              onClick={handleUpdateClick}
-              style={{ 
-                background: 'white', 
-                color: '#3b82f6', 
-                border: 'none', 
-                padding: '8px 16px', 
-                borderRadius: '4px', 
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}
+              onClick={handleInstallClick}
+              className="bg-white text-green-500 px-4 py-2 rounded font-medium hover:bg-green-50 transition-colors"
             >
-              Oppdater nå
+              Installer
             </button>
             <button 
-              onClick={closeUpdatePrompt}
-              style={{ 
-                background: 'transparent', 
-                color: 'white', 
-                border: '1px solid white', 
-                padding: '8px 16px', 
-                borderRadius: '4px', 
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
+              onClick={() => setDeferredPrompt(null)}
+              className="border border-white/50 text-white px-4 py-2 rounded hover:bg-white/10 transition-colors"
             >
               Senere
             </button>
@@ -206,20 +129,42 @@ const handleUpdateClick = () => {
         </div>
       )}
 
-      {/* Offline Ready Notification */}
-      {offlineReady && !needRefresh && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '20px',
-          background: '#10b981',
-          color: 'white',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          zIndex: 9999,
-        }}>
-          <span>✅ Appen er klar for offline bruk!</span>
+      {/* Update Prompt - Shows when new version is ready */}
+      {(needRefresh || showReloadPrompt) && (
+        <div className="fixed bottom-5 right-5 bg-blue-600 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up border-2 border-blue-700">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-2xl animate-spin-slow">🔄</span>
+            <div>
+              <h3 className="font-bold">Ny versjon tilgjengelig!</h3>
+              <p className="text-sm opacity-90">
+                Oppdater for å få de nyeste funksjonene
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleUpdateClick}
+              className="bg-white text-blue-600 px-4 py-2 rounded font-semibold hover:bg-blue-50 transition-all transform hover:scale-105"
+            >
+              Oppdater nå
+            </button>
+            <button 
+              onClick={closeUpdatePrompt}
+              className="border border-white/50 text-white px-4 py-2 rounded hover:bg-white/10 transition-colors"
+            >
+              Senere
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Offline Ready Toast */}
+      {offlineReady && !needRefresh && !showReloadPrompt && (
+        <div className="fixed bottom-5 left-5 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg animate-fade-in">
+          <span className="flex items-center gap-2">
+            <span>✅</span>
+            <span>Appen fungerer offline!</span>
+          </span>
         </div>
       )}
     </>
