@@ -39,7 +39,7 @@ export default defineConfig({
         background_color: '#f8fafc',
         display: 'standalone',
         scope: '/Lawncare/',
-        start_url: '/Lawncare/',
+        start_url: '/Lawncare/#/',
         orientation: 'portrait-primary',
         lang: 'no',
         icons: [
