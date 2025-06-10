@@ -9,10 +9,9 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 cleanupOutdatedCaches();
 
 // Forhåndscacher alle ressurser (HTML, JS, CSS etc.) definert i manifestet.
-// self.__WB_MANIFEST er plassholderen som vite-plugin-pwa fyller ut.
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Regel for Firestore API-kall: Prøv nettverk først, fall tilbake på cache.
+// Regel for Firestore API-kall
 registerRoute(
   ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
@@ -23,57 +22,70 @@ registerRoute(
         maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dager
       }),
       new CacheableResponsePlugin({
-        statuses: [200], // Cache kun vellykkede svar.
+        statuses: [200],
       }),
     ],
   })
 );
 
 // ------------------------------------------------------------------------------------------
-// MINIMAL SERVICE WORKER LOGIKK FOR PROMPT-MODUS
+// SERVICE WORKER LIFECYCLE FOR UMIDDELBAR AKTIVERING
 // ------------------------------------------------------------------------------------------
 
-// Håndter install event for prompt-modus
+// Install: Ikke vent på den gamle service workeren
 self.addEventListener('install', (event) => {
   console.log('SW: Service worker installert');
-  // I prompt-modus skal vi IKKE kalle skipWaiting() automatisk
+  // KRITISK: Aktiver umiddelbart uten å vente
+  self.skipWaiting();
 });
 
-// Håndter activate event for prompt-modus  
+// Activate: Ta kontroll over alle klienter umiddelbart
 self.addEventListener('activate', (event) => {
   console.log('SW: Service worker aktivert');
   
-  // Enkel activate uten kompleks promise-håndtering
   event.waitUntil(
-    Promise.resolve().then(() => {
-      console.log('SW: Service worker aktivert og klar');
+    // Ta kontroll over alle åpne tabs/vinduer umiddelbart
+    self.clients.claim().then(() => {
+      console.log('SW: Ny service worker har tatt kontroll over alle klienter');
+      
+      // Send melding til alle klienter om at ny SW er aktiv
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SW_ACTIVATED',
+            payload: 'Ny service worker er aktiv og har tatt kontroll'
+          });
+        });
+      });
     })
   );
 });
 
-// Forenklet message handling for prompt-modus
+// Message handling for eksplisitt SKIP_WAITING
 self.addEventListener('message', (event) => {
   console.log('SW: Mottok melding:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW: SKIP_WAITING melding mottatt - aktiverer ny service worker');
+    console.log('SW: SKIP_WAITING melding mottatt - tvinger aktivering');
     
-    // Kall skipWaiting uten kompleks promise-håndtering
+    // Force skipWaiting og ta kontroll
     self.skipWaiting();
+    
+    // Ta kontroll over alle klienter umiddelbart
+    self.clients.claim().then(() => {
+      console.log('SW: Tvunget aktivering fullført');
+    });
   }
 });
 
-// Error handling med bedre debugging
+// Error handling
 self.addEventListener('error', (event) => {
   console.error('SW: Service worker error:', event.error);
-  console.error('SW: Error details:', event);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
   console.error('SW: Unhandled promise rejection:', event.reason);
-  console.error('SW: Rejection details:', event);
-  // Forhindre at feilen crasher service worker
   event.preventDefault();
 });
 
-console.log('PlenPilot Service Worker (Minimal Prompt Mode) er lastet og kjører!');
+console.log('PlenPilot Service Worker (Force Activate Mode) er lastet og kjører!');
