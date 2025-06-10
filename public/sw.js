@@ -58,15 +58,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Dine originale, kommenterte eksempler for push-varslinger er bevart her.
-/*
-self.addEventListener('push', (event) => {
-  // ... din push-logikk ...
-});
-
-self.addEventListener('notificationclick', (event) => {
-  // ... din notification click-logikk ...
-});
-*/
-
 console.log('PlenPilot Egendefinert Service Worker er lastet og kjører!');
