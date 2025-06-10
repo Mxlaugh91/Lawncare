@@ -36,18 +36,10 @@ jobs:
 
       - name: DEBUG - List files and check vite.config.ts
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing all files in current directory (root):"
-          ls -la
-          echo "Attempting to cat vite.config.ts..."
-          if [ -f vite.config.ts ]; then # Sjekk for .ts
-            cat vite.config.ts          # Cat .ts
-            echo "Successfully catted vite.config.ts"
-          else
-            echo "ERROR: vite.config.ts NOT FOUND in current directory!"
-            echo "Files in current directory are:"
-            ls -la # Lister filene igjen for å se hva som faktisk er der
-          fi
+           echo "Searching for vite.config files..."
+           ls -la vite.config.* || echo "No vite.config.* files found with ls"
+           # Hvis du har 'find' tilgjengelig:
+           # find . -maxdepth 1 -name "vite.config.*" -print -exec echo "--- Content of {} ---" \; -exec cat {} \; -exec echo "--- End of {} ---" \;
         
 
       - name: Bygg prosjektet
