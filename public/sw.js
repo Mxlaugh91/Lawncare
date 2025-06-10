@@ -1,134 +1,71 @@
 // public/sw.js
 
-// Import necessary Workbox modules.
-// vite-plugin-pwa will ensure these modules are available.
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from 'workbox-strategies'; // Import strategies you might use
+import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { clientsClaim } from 'workbox-core';
 
-// ------------------------------------------------------------------------------------------
-// VITE-PLUGIN-PWA & WORKBOX CONFIGURATIONS
-//
-// Based on your `vite.config.js`, vite-plugin-pwa will:
-// 1. Inject the Precache Manifest:
-//    Replaces `self.__WB_MANIFEST` with an array of URLs to precache.
-//    These are generated from `injectManifest.globPatterns`.
-//
-// 2. Inject Workbox Options:
-//    - `skipWaiting: true`: The plugin injects `self.skipWaiting();`
-//    - `clientsClaim: true`: The plugin injects `clientsClaim();`
-//    - `cleanupOutdatedCaches: true`: The plugin injects `cleanupOutdatedCaches();`
-//    - `runtimeCaching` rules: The plugin injects `registerRoute(...)` calls for these.
-//
-// The explicit calls below for skipWaiting, clientsClaim, and cleanupOutdatedCaches
-// are good practice with injectManifest to ensure these behaviors are active,
-// even though vite-plugin-pwa (v0.17+) typically injects them.
-// ------------------------------------------------------------------------------------------
-
-// (1) Tell the service worker to activate new versions immediately.
-// Corresponds to `skipWaiting: true` in your Vite PWA config.
+// Aktiverer nye versjoner av service workeren umiddelbart.
 self.skipWaiting();
 
-// (2) Allow the new service worker to take control of open pages (clients) immediately.
-// Corresponds to `clientsClaim: true` in your Vite PWA config.
+// Lar den nye service workeren ta kontroll over åpne sider (klienter) umiddelbart.
 clientsClaim();
 
-// (3) Clean up old caches from previous service worker versions.
-// Corresponds to `cleanupOutdatedCaches: true` in your Vite PWA config.
+// Rydder opp i gamle cacher fra tidligere versjoner.
 cleanupOutdatedCaches();
 
-// (4) Precache all assets specified in the manifest.
-// `self.__WB_MANIFEST` is the placeholder that vite-plugin-pwa will fill.
-// The `|| []` provides a fallback if the manifest isn't injected (shouldn't happen).
+// Forhåndscacher alle ressurser (HTML, JS, CSS etc.) definert i manifestet.
+// self.__WB_MANIFEST er plassholderen som vite-plugin-pwa fyller ut.
 precacheAndRoute(self.__WB_MANIFEST || []);
 
+
 // ------------------------------------------------------------------------------------------
-// RUNTIME CACHING RULES
-//
-// The `runtimeCaching` rules from your `vite.config.js` (like your Firestore rule)
-// should be automatically injected here by `vite-plugin-pwa`.
-//
-// If you needed to add a rule manually (that's NOT in vite.config.js),
-// you would do it like this:
-/*
+// RUNTIME CACHING-REGLER
+// Siden vi bruker injectManifest-strategien, må vi definere alle
+// runtime-caching-regler manuelt her.
+// ------------------------------------------------------------------------------------------
+
+// Regel for Firestore API-kall: Prøv nettverk først, fall tilbake på cache.
 registerRoute(
-  ({url}) => url.origin === 'https://api.example.com' && url.pathname.startsWith('/data/'),
+  ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
-    cacheName: 'api-data-cache',
+    cacheName: 'firestore-cache',
     plugins: [
       new ExpirationPlugin({
-        maxEntries: 30,
-        maxAgeSeconds: 24 * 60 * 60, // 1 day
+        maxEntries: 50,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dager
       }),
       new CacheableResponsePlugin({
-        statuses: [0, 200],
+        statuses: [200], // Cache kun vellykkede svar.
       }),
     ],
   })
 );
-*/
-// ------------------------------------------------------------------------------------------
 
 
 // ------------------------------------------------------------------------------------------
-// CUSTOM SERVICE WORKER LOGIC (OPTIONAL)
-// You can add more advanced service worker features here.
+// EGENDEFINERT SERVICE WORKER-LOGIKK
 // ------------------------------------------------------------------------------------------
 
-// Listener for messages from client.
-// Your `PwaUpdater.tsx` uses `updateServiceWorker(true)` which calls `messageSW({ type: 'SKIP_WAITING' })`
-// from `virtual:pwa-register`, so this listener handles that message.
+// Lytter etter meldinger fra klienten (din PwaUpdater-komponent)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW Received SKIP_WAITING message from client, calling self.skipWaiting().');
-    self.skipWaiting(); // Ensures the new SW activates
+    console.log('SW: Mottok SKIP_WAITING-melding, aktiverer ny service worker.');
+    self.skipWaiting();
   }
 });
 
-// Example: Basic Push Notification Listener
+// Dine originale, kommenterte eksempler for push-varslinger er bevart her.
 /*
 self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push Received.');
-  const pushData = event.data ? event.data.json() : { title: 'PlenPilot', body: 'New notification!' };
-
-  const title = pushData.title || 'PlenPilot';
-  const options = {
-    body: pushData.body || 'You have a new message.',
-    icon: '/Lawncare/icons/icon-192x192.png', // Adjust path if your icons are elsewhere or base path differs
-    badge: '/Lawncare/icons/icon-72x72.png',  // Adjust path
-    data: {
-      url: pushData.url || '/Lawncare/' // URL to open on click, make sure it includes your base path
-    }
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  // ... din push-logikk ...
 });
-*/
 
-// Example: Notification Click Handler
-/*
 self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] Notification click Received.');
-  event.notification.close();
-
-  const urlToOpen = event.notification.data && event.notification.data.url ? event.notification.data.url : '/Lawncare/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        // Check if the client URL matches the base path or a specific internal page
-        if (client.url.endsWith(urlToOpen) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
+  // ... din notification click-logikk ...
 });
 */
 
-console.log('Lawncare Custom Service Worker (public/sw.js) has been loaded and is running!');
+console.log('PlenPilot Egendefinert Service Worker er lastet og kjører!');
