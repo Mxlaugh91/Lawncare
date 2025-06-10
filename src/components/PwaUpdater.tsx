@@ -17,6 +17,16 @@ function PwaUpdater() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [showReloadPrompt, setShowReloadPrompt] = useState(false);
 
+  // Utility function for platform detection
+  const getPlatformInfo = () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        (window.navigator as any).standalone === true;
+    
+    return { isIOS, isAndroid, isStandalone };
+  };
+
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
@@ -33,14 +43,40 @@ function PwaUpdater() {
     onRegisterError(error) {
       console.log('SW registreringsfeil:', error);
     },
-    // KRITISK: Denne callback-en utløses når den nye service worker-en er aktivert
     onUpdated() {
       console.log('SW oppdatert og aktivert - laster siden på nytt');
-      // Nå er den nye service worker-en aktivert og har tatt kontroll
-      // Vi kan trygt laste siden på nytt
-      window.location.reload();
+      
+      // Plattformspesifikk reload
+      const { isIOS } = getPlatformInfo();
+      
+      if (isIOS) {
+        // iOS krever ofte hard reload
+        window.location.href = window.location.href;
+      } else {
+        window.location.reload();
+      }
     },
   });
+
+  // Listen for service worker messages
+  useEffect(() => {
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'FORCE_RELOAD') {
+        console.log('Mottok FORCE_RELOAD fra service worker');
+        window.location.reload();
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
+    };
+  }, []);
 
   // onNeedRefresh og onOfflineReady vil bli trigget av useRegisterSW.
   // Vi setter showReloadPrompt til true når det er en oppdatering.
@@ -93,6 +129,20 @@ function PwaUpdater() {
     console.log('Bruker trykket "Oppdater nå"');
     
     try {
+      // Skjul dialogen umiddelbart
+      setShowReloadPrompt(false);
+      setNeedRefresh(false);
+      
+      // Plattformspesifikk håndtering
+      const { isIOS, isStandalone } = getPlatformInfo();
+      
+      if (isIOS && isStandalone) {
+        // iOS PWA krever ofte hard reload
+        console.log('iOS PWA detektert - bruker hard reload');
+        window.location.reload();
+        return;
+      }
+      
       // Send eksplisitt melding til service worker
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         console.log('Sender SKIP_WAITING melding til service worker');
@@ -101,24 +151,34 @@ function PwaUpdater() {
         });
         
         // Lyt etter at service worker er aktivert
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
+        const handleControllerChange = () => {
           console.log('Service worker controller endret - laster siden på nytt');
+          // Bruk hard reload for å sikre at alle ressurser oppdateres
+          if (isIOS) {
+            window.location.href = window.location.href;
+          } else {
+            window.location.reload();
+          }
+        };
+        
+        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange, { once: true });
+        
+        // Timeout som backup for iOS
+        setTimeout(() => {
+          console.log('Timeout aktivert - tvinger reload');
           window.location.reload();
-        }, { once: true });
+        }, 3000);
+        
       } else {
         // Fallback til standard updateServiceWorker
         console.log('Bruker standard updateServiceWorker');
         await updateServiceWorker(true);
       }
       
-      // Skjul dialogen umiddelbart
-      setShowReloadPrompt(false);
-      setNeedRefresh(false);
-      
     } catch (error) {
       console.error('Feil ved oppdatering av service worker:', error);
-      // Vis dialogen igjen hvis noe går galt
-      setShowReloadPrompt(true);
+      // Force reload som fallback
+      window.location.reload();
     }
   };
 
@@ -129,7 +189,7 @@ function PwaUpdater() {
 
   return (
     <>
-      {/* Installasjons-dialog (uendret) */}
+      {/* Installasjons-dialog */}
       {!isInstalled && deferredPrompt && (
         <div className="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up">
           <h3 className="font-semibold mb-1">Installer PlenPilot</h3>
@@ -158,7 +218,7 @@ function PwaUpdater() {
         </div>
       )}
       
-      {/* Offline-klar toast (uendret) */}
+      {/* Offline-klar toast */}
       {offlineReady && !needRefresh && !showReloadPrompt && (
          <div className="fixed bottom-5 left-5 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg animate-fade-in">
            <span className="flex items-center gap-2">
