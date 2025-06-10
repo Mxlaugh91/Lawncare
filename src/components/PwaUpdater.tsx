@@ -16,16 +16,7 @@ function PwaUpdater() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showReloadPrompt, setShowReloadPrompt] = useState(false);
-
-  // Utility function for platform detection
-  const getPlatformInfo = () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                        (window.navigator as any).standalone === true;
-    
-    return { isIOS, isAndroid, isStandalone };
-  };
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -43,48 +34,22 @@ function PwaUpdater() {
     onRegisterError(error) {
       console.log('SW registreringsfeil:', error);
     },
-    onUpdated() {
-      console.log('SW oppdatert og aktivert - laster siden på nytt');
-      
-      // Plattformspesifikk reload
-      const { isIOS } = getPlatformInfo();
-      
-      if (isIOS) {
-        // iOS krever ofte hard reload
-        window.location.href = window.location.href;
-      } else {
-        window.location.reload();
-      }
+    onNeedRefresh() {
+      console.log('onNeedRefresh callback trigget');
+      // Ikke sett showReloadPrompt her - vi håndterer det i useEffect
+    },
+    onOfflineReady() {
+      console.log('onOfflineReady callback trigget');
     },
   });
-
-  // Listen for service worker messages
-  useEffect(() => {
-    const handleServiceWorkerMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'FORCE_RELOAD') {
-        console.log('Mottok FORCE_RELOAD fra service worker');
-        window.location.reload();
-      }
-    };
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-    }
-
-    return () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
-      }
-    };
-  }, []);
 
   // onNeedRefresh og onOfflineReady vil bli trigget av useRegisterSW.
   // Vi setter showReloadPrompt til true når det er en oppdatering.
   useEffect(() => {
-    if (needRefresh) {
+    if (needRefresh && !isUpdating) {
       setShowReloadPrompt(true);
     }
-  }, [needRefresh]);
+  }, [needRefresh, isUpdating]);
   
   useEffect(() => {
     if (offlineReady) {
@@ -128,63 +93,41 @@ function PwaUpdater() {
   const handleUpdateClick = async () => {
     console.log('Bruker trykket "Oppdater nå"');
     
+    if (isUpdating) {
+      console.log('Oppdatering pågår allerede');
+      return;
+    }
+    
     try {
-      // Skjul dialogen umiddelbart
+      // Merk at oppdatering pågår og skjul dialogen
+      setIsUpdating(true);
       setShowReloadPrompt(false);
-      setNeedRefresh(false);
       
-      // Plattformspesifikk håndtering
-      const { isIOS, isStandalone } = getPlatformInfo();
+      // KRITISK for prompt-modus: Kall updateServiceWorker med reloadPage=true
+      console.log('Kaller updateServiceWorker(true) - dette skal aktivere ny SW og reloade');
+      await updateServiceWorker(true);
       
-      if (isIOS && isStandalone) {
-        // iOS PWA krever ofte hard reload
-        console.log('iOS PWA detektert - bruker hard reload');
+      // Hvis vi kommer hit uten reload, noe gikk galt - force reload
+      console.log('updateServiceWorker returnerte uten reload - tvinger reload');
+      setTimeout(() => {
         window.location.reload();
-        return;
-      }
-      
-      // Send eksplisitt melding til service worker
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        console.log('Sender SKIP_WAITING melding til service worker');
-        navigator.serviceWorker.controller.postMessage({ 
-          type: 'SKIP_WAITING' 
-        });
-        
-        // Lyt etter at service worker er aktivert
-        const handleControllerChange = () => {
-          console.log('Service worker controller endret - laster siden på nytt');
-          // Bruk hard reload for å sikre at alle ressurser oppdateres
-          if (isIOS) {
-            window.location.href = window.location.href;
-          } else {
-            window.location.reload();
-          }
-        };
-        
-        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange, { once: true });
-        
-        // Timeout som backup for iOS
-        setTimeout(() => {
-          console.log('Timeout aktivert - tvinger reload');
-          window.location.reload();
-        }, 3000);
-        
-      } else {
-        // Fallback til standard updateServiceWorker
-        console.log('Bruker standard updateServiceWorker');
-        await updateServiceWorker(true);
-      }
+      }, 1000);
       
     } catch (error) {
       console.error('Feil ved oppdatering av service worker:', error);
-      // Force reload som fallback
+      // Resett state og force reload som fallback
+      setIsUpdating(false);
+      setShowReloadPrompt(false);
+      setNeedRefresh(false);
       window.location.reload();
     }
   };
 
   const closeUpdatePrompt = () => {
+    console.log('Avbryter oppdatering - resetter tilstand');
     setShowReloadPrompt(false);
-    setNeedRefresh(false);
+    setNeedRefresh(false);  // KRITISK: Resett needRefresh tilstand eksplisitt
+    setIsUpdating(false);
   };
 
   return (
@@ -212,8 +155,24 @@ function PwaUpdater() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleUpdateClick} className="bg-white text-blue-600 px-4 py-2 rounded font-semibold hover:bg-blue-50 transition-all transform hover:scale-105">Oppdater nå</button>
-            <button onClick={closeUpdatePrompt} className="border border-white/50 text-white px-4 py-2 rounded hover:bg-white/10 transition-colors">Senere</button>
+            <button 
+              onClick={handleUpdateClick} 
+              disabled={isUpdating}
+              className={`px-4 py-2 rounded font-semibold transition-all transform ${
+                isUpdating 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-white text-blue-600 hover:bg-blue-50 hover:scale-105'
+              }`}
+            >
+              {isUpdating ? 'Oppdaterer...' : 'Oppdater nå'}
+            </button>
+            <button 
+              onClick={closeUpdatePrompt} 
+              disabled={isUpdating}
+              className="border border-white/50 text-white px-4 py-2 rounded hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              Senere
+            </button>
           </div>
         </div>
       )}
