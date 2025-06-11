@@ -61,7 +61,7 @@ const LoginPage = () => {
           </div>
           <CardTitle className="text-2xl font-bold">Logg inn</CardTitle>
           <CardDescription>
-            Logg inn for å få tilgang til PlenPilots bruker
+            Logg inn nisse
           </CardDescription>
         </CardHeader>
         <CardContent>
