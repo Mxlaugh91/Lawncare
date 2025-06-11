@@ -1,4 +1,4 @@
-// vite.config.ts - Using generateSW strategy
+// vite.config.ts - Using injectManifest strategy with custom service worker
 
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -13,48 +13,27 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: 'auto',
       
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'firestore-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [200],
-              },
-            },
-          },
-          {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'images-cache',
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-              },
-            },
-          },
-        ],
+      // Use injectManifest strategy with custom service worker
+      strategies: 'injectManifest',
+      swSrc: 'src/sw.js',
+      swDest: 'sw.js',
+      
+      // Development options
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
       
+      // Include additional assets
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
       
+      // PWA Manifest
       manifest: {
         id: '/Lawncare/',
         name: 'PlenPilot',
         short_name: 'PlenPilot',
         description: 'A maintenance management application for lawn care.',
-        theme_color: '#f8fafc',
+        theme_color: '#22c55e',
         background_color: '#f8fafc',
         display: 'standalone',
         scope: '/Lawncare/',
