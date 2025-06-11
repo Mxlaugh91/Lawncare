@@ -7,12 +7,7 @@ import { NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// For type-hinting i JS-fil for editorer som VS Code
-/// <reference lib="webworker" />
 
-// Aktiver Workbox debug-logging
-self.__WB_DISABLE_DEV_LOGS = false; 
-console.log('SW: PlenPilot Custom Service Worker starting... Workbox logs should be enabled.');
 
 // 1. Precache all static assets
 console.log('SW: About to call precacheAndRoute with self.__WB_MANIFEST');
@@ -66,6 +61,19 @@ registerRoute(
   })
 );
 console.log('SW: Google Fonts runtime caching rules registered.');
+
+// --- NYTT: Navigation Route for SPA ---
+const spaFallbackHandler = createHandlerBoundToURL('index.html'); 
+const navigationRoute = new NavigationRoute(spaFallbackHandler, {
+  denylist: [
+    new RegExp('/api/'),            
+    new RegExp('/[^/?]+\\.[^/?]+$'), 
+    new RegExp('/manifest.webmanifest'), 
+  ],
+});
+registerRoute(navigationRoute);
+console.log('SW: SPA NavigationRoute registered.');
+
 
 // --- Service Worker Lifecycle Events (fra Test C) ---
 self.addEventListener('install', (event) => {
