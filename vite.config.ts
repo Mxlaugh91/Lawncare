@@ -1,4 +1,4 @@
-// vite.config.ts - Optimalisert for rask SW oppdatering
+// vite.config.ts - Fikset for React vendor error
 import path from 'path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -17,25 +17,23 @@ export default defineConfig({
       filename: 'sw.js',
       
       injectManifest: {
-        // VIKTIG: Kun cache KRITISKE filer for rask oppdatering
         globPatterns: [
           'index.html',
-          '**/*.{js,css}', // Kun JS og CSS
+          '**/*.{js,css}',
           'favicon.ico',
-          'icons/icon-192x192.png', // Kun én liten ikon
+          'icons/icon-192x192.png',
         ],
-        // Ignorer ALT som ikke er kritisk
         globIgnores: [
           'screenshots/**/*',
           'icons/icon-384x384.png',
           'icons/icon-512x512.png',
           'icons/maskable-icon.png',
           '**/*.map',
-          '**/*.woff2', // Fonts lastes on-demand
+          '**/*.woff2',
           '**/*.webp',
           '**/*.svg',
         ],
-        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // Maks 2MB per fil
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
       },
       
       includeAssets: ['favicon.ico'],
@@ -52,7 +50,6 @@ export default defineConfig({
         start_url: '/Lawncare/#/',
         orientation: 'portrait-primary',
         lang: 'no',
-        // Kun essensielle ikoner
         icons: [
           { 
             src: "icons/icon-192x192.png", 
@@ -63,10 +60,9 @@ export default defineConfig({
             src: "icons/icon-512x512.png", 
             sizes: "512x512", 
             type: "image/png",
-            purpose: "any maskable" // Kombinert purpose
+            purpose: "any maskable"
           }
         ],
-        // Fjern screenshots - de trengs ikke for funksjonalitet
       }
     })
   ],
@@ -85,28 +81,15 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Optimaliser chunks for raskere lasting
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react')) return 'react';
-            if (id.includes('firebase')) return 'firebase';
-            return 'vendor';
-          }
+        // FIKSET: Bruk den originale manualChunks konfigurasjonen
+        // som fungerte før, ikke den nye funksjonen
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
         },
-        // Kortere filnavn
-        chunkFileNames: 'js/[name]-[hash:8].js',
-        entryFileNames: 'js/[name]-[hash:8].js',
-        assetFileNames: '[ext]/[name]-[hash:8].[ext]',
       },
     },
-    // Minimer output
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Fjern console.log i prod
-        drop_debugger: true,
-      },
-    },
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 600,
   },
 });
