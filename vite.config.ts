@@ -1,6 +1,6 @@
-// vite.config.ts - Complete working configuration
+// vite.config.ts - Fixed configuration with proper path resolution
 
-import path from 'path';
+import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -14,14 +14,16 @@ export default defineConfig({
       injectRegister: false,
       strategies: 'injectManifest',
       
-      // VIKTIG: Disse MÅ være inne i injectManifest objektet!
+      // Service worker configuration
+      srcDir: 'src',
+      filename: 'sw.js',
+      
       injectManifest: {
-        swSrc: path.resolve(__dirname, 'src/sw.js'),
+        swSrc: 'src/sw.js',
         swDest: 'sw.js',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
-      
       
       // Include assets for precaching
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
@@ -70,7 +72,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
   optimizeDeps: {
@@ -79,5 +81,18 @@ export default defineConfig({
   server: {
     port: 5176,
     host: '0.0.0.0',
+  },
+  build: {
+    // Split chunks to reduce size
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
 });
