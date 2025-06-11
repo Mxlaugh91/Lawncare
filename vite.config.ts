@@ -1,75 +1,44 @@
-// vite.config.ts - Tilpasset for vite-plugin-pwa v0.21.1 (eller lignende 0.x)
-
-import path from 'path'; // Kan være nyttig for resolve.alias
-import { fileURLToPath, URL } from 'node:url'; // For resolve.alias
+// vite.config.ts
+import path from 'path';
+import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa'; // Vil importere fra din installerte 0.21.1 versjon
+import { VitePWA } from 'vite-plugin-pwa'; // Importerer fra din nedgraderte, stabile versjon
 
 export default defineConfig({
   base: '/Lawncare/',
   plugins: [
     react(),
     VitePWA({
-      // --- Generelle PWA-innstillinger ---
-      registerType: 'prompt', // Viser "Oppdater nå"-prompt via PwaUpdater.tsx
+      registerType: 'prompt',
+      injectRegister: 'auto', // La PWA-pluginen håndtere grunnleggende registrering; useRegisterSW vil "koble seg på"
       
-      // For 0.x versjoner er det vanlig å la vite-plugin-pwa håndtere
-      // registreringen hvis du ikke har spesifikke behov for å overstyre den helt.
-      // 'auto' er en vanlig default. Hvis PwaUpdater.tsx bruker useRegisterSW,
-      // vil denne hooken også fungere med den auto-genererte registreringen.
-      // Alternativt, sett til null hvis du vil at useRegisterSW skal gjøre alt.
-      injectRegister: 'auto', 
+      strategies: 'injectManifest',
+      
+      // Bruk srcDir og filename for å spesifisere kilde-SW for 0.x versjoner
+      srcDir: 'src',
+      filename: 'sw.js', // Peker på src/sw.js
 
-      // --- Strategi og Kilde Service Worker ---
-      strategies: 'injectManifest', // Vi bruker vår egen custom service worker
-
-      // Anbefalt måte for 0.x å spesifisere kilde-SW for injectManifest:
-      srcDir: 'src',       // Mappen der din kilde-SW ('sw.js') ligger
-      filename: 'sw.js',   // Navnet på din kilde-SW-fil inne i srcDir.
-                           // Ferdig SW i 'dist' vil hete 'dist/sw.js'.
-
-      // --- Workbox-spesifikke options for injectManifest ---
-      // For 0.x, ble Workbox-options ofte satt direkte under 'workbox' objektet,
-      // selv for 'injectManifest'. 'injectManifest'-objektet var noen ganger bare for
-      // de options som var unike for Workbox-build sin injectManifest-funksjon.
-      // La oss prøve å legge injectManifest-spesifikke options her hvis de er anerkjent,
-      // ellers kan de høre hjemme under et toppnivå 'workbox' objekt.
-      // Den viktigste er at 'swSrc' (via srcDir/filename) og 'swDest' (via filename/outDir) blir riktig.
       injectManifest: {
-        // For 0.x er det ikke alltid nødvendig å spesifisere globPatterns her hvis
-        // de er satt under workbox-objektet, men det skader ikke hvis støttet.
+        // Workbox-spesifikke build options for injectManifest
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        // Options som minify, enableWorkboxModulesLogs er vanligvis ikke her i 0.x for injectManifest.
-      },
-
-      // --- Workbox-konfigurasjon (kan også gjelde for injectManifest for visse options) ---
-      // Mange 0.x versjoner brukte et 'workbox' objekt for generelle Workbox-innstillinger
-      // selv om strategien var 'injectManifest'.
-      workbox: {
-        // cleanupOutdatedCaches, clientsClaim, skipWaiting er ofte konfigurert i selve sw.js for injectManifest.
-        // Men, pluginen kan ha defaults for disse.
-        // Hvis din src/sw.js håndterer dette (som den gjør), trenger du ikke nødvendigvis disse her.
-        // For generateSW er de kritiske her. For injectManifest er din sw.js primærkilden.
-        // cleanupOutdatedCaches: true, 
-        // clientsClaim: true,
-        // skipWaiting: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'], // Redundant hvis også i injectManifest, men skader ikke
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB, juster ved behov
+        // For 0.x versjoner er options som 'minify' og 'enableWorkboxModulesLogs'
+        // ofte ikke satt her, men styres av Workbox' defaults eller globale innstillinger.
+        // Hvis du trenger spesifikk Workbox build config, sjekk dokumentasjonen for den Workbox-versjonen
+        // som følger med din vite-plugin-pwa 0.x versjon.
       },
       
-      // --- Utviklingsmodus (mindre kritisk for produksjonsbygget) ---
-      // For 0.x, var 'devOptions' ofte ikke tilgjengelig, eller PWA i dev ble aktivert annerledes.
-      // Du kan kommentere ut denne blokken hvis den gir feil med 0.21.1.
+      // Viktig: For 0.x versjoner, het devOptions ofte noe annet eller ble aktivert med env-variabel.
+      // Denne blokken kan være unødvendig eller feil for 0.x.
+      // Hvis du får feil relatert til devOptions, kommenter den ut.
       // devOptions: {
       //   enabled: true, 
       //   type: 'module',
       // },
       
-      // --- Assets og PWA Manifest ---
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'], // Filer som skal precaches
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
       manifest: {
-        // ... (ditt PWA-manifest er uendret og ser bra ut) ...
         id: '/Lawncare/',
         name: 'PlenPilot',
         short_name: 'PlenPilot',
