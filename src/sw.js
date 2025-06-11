@@ -67,19 +67,6 @@ registerRoute(
 );
 console.log('SW: Google Fonts runtime caching rules registered.');
 
-// --- NYTT: Navigation Route for SPA ---
-const spaFallbackHandler = createHandlerBoundToURL('index.html'); 
-const navigationRoute = new NavigationRoute(spaFallbackHandler, {
-  denylist: [
-    new RegExp('/api/'),            
-    new RegExp('/[^/?]+\\.[^/?]+$'), 
-    new RegExp('/manifest.webmanifest'), 
-  ],
-});
-registerRoute(navigationRoute);
-console.log('SW: SPA NavigationRoute registered.');
-
-
 // --- Service Worker Lifecycle Events (fra Test C) ---
 self.addEventListener('install', (event) => {
   console.log('SW: Event "install" - Calling self.skipWaiting()');
