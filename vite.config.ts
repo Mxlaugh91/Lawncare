@@ -16,7 +16,7 @@ export default defineConfig({
       
       // VIKTIG: Disse MÅ være inne i injectManifest objektet!
       injectManifest: {
-        swSrc: 'src/sw.js',
+        swSrc: path.resolve(__dirname, 'src/sw.js'),
         swDest: 'sw.js',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
