@@ -34,20 +34,15 @@ jobs:
       - name: Installer avhengigheter
         run: npm ci
 
-      - name: Clean previous build artifacts and Vite cache
+      - name: DEBUG - Show full content of src/sw.js before build
         run: |
-          echo "Removing dist directory..."
-          rm -rf ./dist
-          echo "Removing Vite cache (node_modules/.vite)..."
-          rm -rf ./node_modules/.vite
-          echo "Cache cleaning complete."
-
-      - name: DEBUG - List files and check vite.config.ts
-        run: |
-           echo "Searching for vite.config files..."
-           ls -la vite.config.* || echo "No vite.config.* files found with ls"
-           # Hvis du har 'find' tilgjengelig:
-           # find . -maxdepth 1 -name "vite.config.*" -print -exec echo "--- Content of {} ---" \; -exec cat {} \; -exec echo "--- End of {} ---" \;
+          echo "=== Full content of src/sw.js (from CI/CD environment) ==="
+          if [ -f src/sw.js ]; then
+            cat src/sw.js
+          else
+            echo "ERROR: src/sw.js NOT FOUND in CI/CD environment!"
+          fi
+          echo "=== End of src/sw.js content ==="
         
 
       - name: Bygg prosjektet
