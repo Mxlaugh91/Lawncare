@@ -61,7 +61,7 @@ const LoginPage = () => {
           </div>
           <CardTitle className="text-2xl font-bold">Logg inn</CardTitle>
           <CardDescription>
-            Logg inn nisse
+            Logg inn nisse1000
           </CardDescription>
         </CardHeader>
         <CardContent>
