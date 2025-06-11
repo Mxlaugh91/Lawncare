@@ -3,7 +3,7 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useState, useEffect } from 'react';
 
-// Definerer typen for beforeinstallprompt-eventet for PWA-installasjon
+// Define the type for beforeinstallprompt event for PWA installation
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{
@@ -16,53 +16,73 @@ interface BeforeInstallPromptEvent extends Event {
 function PwaUpdater() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false); // For å vise "Oppdaterer..."
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const {
-    offlineReady: [offlineReady, setOfflineReady], // Appen er klar for offline bruk
-    needRefresh: [needRefresh, setNeedRefresh],   // En ny SW-versjon venter
-    updateServiceWorker,                          // Funksjon for å oppdatere SW
+    offlineReady: [offlineReady, setOfflineReady],
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
-      console.log('PWAUpdater: Service Worker registrert:', swUrl);
-      // Sjekk periodisk for oppdateringer hvis registreringsobjektet er tilgjengelig
+      console.log('PWAUpdater: Service Worker registered:', swUrl);
+      // Check for updates periodically
       if (registration) {
         setInterval(() => {
-          if (!isUpdating) { // Ikke sjekk for oppdateringer hvis en oppdatering allerede pågår
-            console.log('PWAUpdater: Kjører periodisk sjekk for SW-oppdatering...');
+          if (!isUpdating) {
+            console.log('PWAUpdater: Checking for SW updates...');
             registration.update();
           }
-        }, 60 * 60 * 1000); // Hver time
-        console.log('PWAUpdater: Periodisk SW-oppdateringssjekk satt opp.');
+        }, 60 * 60 * 1000); // Every hour
       }
     },
     onRegisterError(error) {
-      console.error('PWAUpdater: Feil ved SW-registrering:', error);
+      console.error('PWAUpdater: SW registration error:', error);
     },
     onOfflineReady() {
-      console.log('PWAUpdater: App er nå klar for offline-bruk.');
-      // Ingen grunn til å sette offlineReady-state her, det gjøres av hooken
+      console.log('PWAUpdater: App is ready for offline use');
     },
   });
 
-  // Håndter PWA installasjonsprompt
+  // Handle service worker messages
   useEffect(() => {
-    // Sjekk om appen kjører i standalone-modus (installert PWA)
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SW_ACTIVATED') {
+        console.log('PWAUpdater: Received SW_ACTIVATED message');
+        // The new service worker has taken control, reload the page
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
+    };
+  }, []);
+
+  // Handle PWA installation prompt
+  useEffect(() => {
+    // Check if app is running in standalone mode (installed PWA)
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
       setIsPwaInstalled(true);
-      console.log('PWAUpdater: Appen kjører i standalone-modus.');
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault(); // Forhindre standard nettleserprompt
+      e.preventDefault();
       setDeferredInstallPrompt(e as BeforeInstallPromptEvent);
-      console.log('PWAUpdater: "beforeinstallprompt" event fanget.');
+      console.log('PWAUpdater: beforeinstallprompt event captured');
     };
 
     const handleAppInstalled = () => {
       setIsPwaInstalled(true);
-      setDeferredInstallPrompt(null); // Fjern lagret prompt etter installasjon
-      console.log('PWAUpdater: "appinstalled" event fanget.');
+      setDeferredInstallPrompt(null);
+      console.log('PWAUpdater: appinstalled event captured');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -74,62 +94,52 @@ function PwaUpdater() {
     };
   }, []);
 
-  // Håndterer klikk på "Installer"-knappen
   const handleInstallClick = async () => {
     if (!deferredInstallPrompt) return;
     
-    await deferredInstallPrompt.prompt(); // Vis installasjonsprompten fra nettleseren
+    await deferredInstallPrompt.prompt();
     const { outcome } = await deferredInstallPrompt.userChoice;
     
     if (outcome === 'accepted') {
-      console.log('PWAUpdater: Bruker aksepterte PWA-installasjon.');
-      setDeferredInstallPrompt(null); // Rydd opp
+      console.log('PWAUpdater: User accepted PWA installation');
+      setDeferredInstallPrompt(null);
     } else {
-      console.log('PWAUpdater: Bruker avviste PWA-installasjon.');
+      console.log('PWAUpdater: User dismissed PWA installation');
     }
   };
 
-  // Håndterer klikk på "Oppdater nå"-knappen
   const handleUpdateClick = async () => {
-    if (!needRefresh) return; // Skal ikke skje hvis knappen vises riktig
+    if (!needRefresh) return;
 
-    setIsUpdating(true); // Vis "Oppdaterer..."
-    console.log('PWAUpdater: Bruker trykket "Oppdater nå". Kaller updateServiceWorker(true).');
+    setIsUpdating(true);
+    console.log('PWAUpdater: User clicked "Update now", calling updateServiceWorker(true)');
     
-    // updateServiceWorker(true) vil:
-    // 1. Sende SKIP_WAITING til den ventende SW.
-    // 2. Når den nye SW har aktivert, vil den reloade siden.
-    await updateServiceWorker(true);
-    
-    // setIsUpdating(false) er ikke strengt nødvendig her,
-    // da siden vil reloade og komponenten nullstilles.
-    // Men hvis reloaden skulle feile, kan det være lurt å ha en timeout for å resette.
-    // For nå stoler vi på at reload skjer.
+    try {
+      // This will send SKIP_WAITING to the waiting SW and reload when it activates
+      await updateServiceWorker(true);
+    } catch (error) {
+      console.error('PWAUpdater: Error updating service worker:', error);
+      setIsUpdating(false);
+    }
   };
 
-  // Lukker "Oppdater nå" eller "Klar for offline"-prompten
   const closeUpdatePrompt = () => {
-    console.log('PWAUpdater: Bruker lukket prompten.');
+    console.log('PWAUpdater: User closed the prompt');
     if (needRefresh) {
-      setNeedRefresh(false); // Skjul "Oppdater nå"-prompten
+      setNeedRefresh(false);
     }
     if (offlineReady) {
-      setOfflineReady(false); // Skjul "Klar for offline"-prompten
+      setOfflineReady(false);
     }
   };
   
-  // Viser installasjonsknapp hvis appen ikke er installert og prompt er tilgjengelig
   const showInstallButton = !isPwaInstalled && deferredInstallPrompt;
-
-  // Viser "Oppdater nå"-dialogen hvis needRefresh er true
   const showUpdateDialog = needRefresh;
-
-  // Viser "Klar for offline"-dialogen hvis offlineReady er true OG ingen oppdatering venter
   const showOfflineReadyDialog = offlineReady && !needRefresh;
 
   return (
     <>
-      {/* PWA Installasjons-knapp/dialog */}
+      {/* PWA Installation prompt */}
       {showInstallButton && (
         <div className="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up">
           <h3 className="font-semibold mb-1">Installer PlenPilot</h3>
@@ -151,20 +161,20 @@ function PwaUpdater() {
         </div>
       )}
 
-      {/* Oppdaterings-dialog ("Oppdater nå") */}
+      {/* Update dialog */}
       {showUpdateDialog && (
         <div className="fixed bottom-5 right-5 bg-blue-600 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up border-2 border-blue-700">
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-2xl animate-spin-slow">🔄</span>
+            <span className="text-2xl">🔄</span>
             <div>
               <h3 className="font-bold">Ny versjon tilgjengelig!</h3>
-              <p className="text-sm opacity-90">Oppdater for å få de nyeste funksjonene.</p>
+              <p className="text-sm opacity-90">Oppdater for å få de nyeste funksjonene</p>
             </div>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={handleUpdateClick}
-              disabled={isUpdating} // Deaktiver mens oppdatering pågår
+              disabled={isUpdating}
               className={`px-4 py-2 rounded font-semibold transition-all transform ${
                 isUpdating 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
@@ -184,24 +194,13 @@ function PwaUpdater() {
         </div>
       )}
       
-      {/* "Klar for offline"-dialog */}
+      {/* Offline ready dialog */}
       {showOfflineReadyDialog && (
-         <div className="fixed bottom-5 left-5 bg-green-600 text-white p-4 rounded-lg shadow-xl z-50 max-w-sm animate-slide-up">
-           <div className="flex items-center gap-3 mb-3">
-            <span className="text-2xl">✅</span>
-            <div>
-              <h3 className="font-bold">Appen er klar offline!</h3>
-              <p className="text-sm opacity-90">Du kan nå bruke appen uten internett.</p>
-            </div>
-          </div>
-           <div className="flex justify-end">
-            <button 
-              onClick={closeUpdatePrompt}
-              className="bg-white text-green-600 px-4 py-2 rounded font-medium hover:bg-green-50 transition-colors"
-            >
-              OK
-            </button>
-           </div>
+         <div className="fixed bottom-5 left-5 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg animate-fade-in">
+           <span className="flex items-center gap-2">
+             <span>✅</span>
+             <span>Appen fungerer offline!</span>
+           </span>
          </div>
        )}
     </>
