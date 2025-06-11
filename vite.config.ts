@@ -1,9 +1,9 @@
-// vite.config.ts
+// vite.config.ts - Optimalisert for rask SW oppdatering
 import path from 'path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa'; // Importerer fra din nedgraderte, stabile versjon
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: '/Lawncare/',
@@ -11,33 +11,35 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      injectRegister: 'auto', // La PWA-pluginen håndtere grunnleggende registrering; useRegisterSW vil "koble seg på"
-      
+      injectRegister: 'auto',
       strategies: 'injectManifest',
-      
-      // Bruk srcDir og filename for å spesifisere kilde-SW for 0.x versjoner
       srcDir: 'src',
-      filename: 'sw.js', // Peker på src/sw.js
-
+      filename: 'sw.js',
+      
       injectManifest: {
-        // Workbox-spesifikke build options for injectManifest
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB, juster ved behov
-        // For 0.x versjoner er options som 'minify' og 'enableWorkboxModulesLogs'
-        // ofte ikke satt her, men styres av Workbox' defaults eller globale innstillinger.
-        // Hvis du trenger spesifikk Workbox build config, sjekk dokumentasjonen for den Workbox-versjonen
-        // som følger med din vite-plugin-pwa 0.x versjon.
+        // VIKTIG: Kun cache KRITISKE filer for rask oppdatering
+        globPatterns: [
+          'index.html',
+          '**/*.{js,css}', // Kun JS og CSS
+          'favicon.ico',
+          'icons/icon-192x192.png', // Kun én liten ikon
+        ],
+        // Ignorer ALT som ikke er kritisk
+        globIgnores: [
+          'screenshots/**/*',
+          'icons/icon-384x384.png',
+          'icons/icon-512x512.png',
+          'icons/maskable-icon.png',
+          '**/*.map',
+          '**/*.woff2', // Fonts lastes on-demand
+          '**/*.webp',
+          '**/*.svg',
+        ],
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // Maks 2MB per fil
       },
       
-      // Viktig: For 0.x versjoner, het devOptions ofte noe annet eller ble aktivert med env-variabel.
-      // Denne blokken kan være unødvendig eller feil for 0.x.
-      // Hvis du får feil relatert til devOptions, kommenter den ut.
-      // devOptions: {
-      //   enabled: true, 
-      //   type: 'module',
-      // },
+      includeAssets: ['favicon.ico'],
       
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
       manifest: {
         id: '/Lawncare/',
         name: 'PlenPilot',
@@ -50,33 +52,21 @@ export default defineConfig({
         start_url: '/Lawncare/#/',
         orientation: 'portrait-primary',
         lang: 'no',
+        // Kun essensielle ikoner
         icons: [
-          { "src": "icons/icon-72x72.png", "sizes": "72x72", "type": "image/png" },
-          { "src": "icons/icon-96x96.png", "sizes": "96x96", "type": "image/png" },
-          { "src": "icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
-          { "src": "icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
-          { "src": "icons/icon-152x152.png", "sizes": "152x152", "type": "image/png" },
-          { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
-          { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png" },
-          { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" },
-          { "src": "icons/maskable-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-        ],
-        screenshots: [
-          {
-            src: "screenshots/desktop-dashboard.png",
-            sizes: "1280x800",
-            type: "image/png",
-            form_factor: "wide",
-            label: "PlenPilot Admin Dashboard - Oversikt over vedlikeholdsstatus"
+          { 
+            src: "icons/icon-192x192.png", 
+            sizes: "192x192", 
+            type: "image/png" 
           },
-          {
-            src: "screenshots/mobile-dashboard.png",
-            sizes: "396x594",
+          { 
+            src: "icons/icon-512x512.png", 
+            sizes: "512x512", 
             type: "image/png",
-            form_factor: "narrow",
-            label: "PlenPilot Mobil Dashboard - Oversikt for ansatte"
+            purpose: "any maskable" // Kombinert purpose
           }
-        ]
+        ],
+        // Fjern screenshots - de trengs ikke for funksjonalitet
       }
     })
   ],
@@ -95,13 +85,28 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+        // Optimaliser chunks for raskere lasting
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'react';
+            if (id.includes('firebase')) return 'firebase';
+            return 'vendor';
+          }
         },
+        // Kortere filnavn
+        chunkFileNames: 'js/[name]-[hash:8].js',
+        entryFileNames: 'js/[name]-[hash:8].js',
+        assetFileNames: '[ext]/[name]-[hash:8].[ext]',
       },
     },
-    chunkSizeWarningLimit: 600,
+    // Minimer output
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Fjern console.log i prod
+        drop_debugger: true,
+      },
+    },
+    chunkSizeWarningLimit: 500,
   },
 });
