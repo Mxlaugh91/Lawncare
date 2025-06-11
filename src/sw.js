@@ -1,22 +1,21 @@
-// src/sw.js (Test A)
+// src/sw.js (Test B)
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst } from 'workbox-strategies';
+import { StaleWhileRevalidate } from 'workbox-strategies'; // Endret fra NetworkFirst
 import { ExpirationPlugin } from 'workbox-expiration';
-import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+// CacheableResponsePlugin er ikke nødvendig for denne spesifikke bilde-regelen
 /// <reference lib="webworker" />
 
 precacheAndRoute(self.__WB_MANIFEST || []); 
 cleanupOutdatedCaches();
 
-// Firestore-regelen
+// Bilde-regelen
 registerRoute(
-  ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
-  new NetworkFirst({
-    cacheName: 'firestore-cache',
+  ({ request }) => request.destination === 'image',
+  new StaleWhileRevalidate({
+    cacheName: 'images-cache',
     plugins: [
-      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 }),
     ],
   })
 );
