@@ -15,7 +15,7 @@ self.__WB_DISABLE_DEV_LOGS = false;
 console.log('SW: PlenPilot Custom Service Worker starting... Workbox logs should be enabled.');
 
 // 1. Precache all static assets
-console.log('SW: About to call precacheAndRoute with self.__WB_MANIFEST');
+console.log('SW: About to call precacheAndRoute with the manifest');
 try {
   precacheAndRoute(self.__WB_MANIFEST || []); // Eneste bruk av plassholderen
   console.log('SW: precacheAndRoute executed.');
@@ -53,6 +53,19 @@ registerRoute(
 );
 console.log('SW: Images runtime caching rule registered.');
 
+// --- NYTT: Google Fonts Caching ---
+registerRoute(
+  ({ url }) => url.origin === 'https://fonts.googleapis.com',
+  new StaleWhileRevalidate({ cacheName: 'google-fonts-stylesheets' })
+);
+registerRoute(
+  ({ url }) => url.origin === 'https://fonts.gstatic.com',
+  new StaleWhileRevalidate({
+    cacheName: 'google-fonts-webfonts',
+    plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 })], // 1 year
+  })
+);
+console.log('SW: Google Fonts runtime caching rules registered.');
 
 // --- NYTT: Navigation Route for SPA ---
 const spaFallbackHandler = createHandlerBoundToURL('index.html'); 
