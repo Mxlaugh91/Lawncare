@@ -1,123 +1,120 @@
-// src/sw.js (Fullversjon, bygger på vellykket Test C)
+// src/sw.js - Optimalisert for rask oppdatering
 
-// Importer
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// For type-hinting i JS-fil for editorer som VS Code
-/// <reference lib="webworker" />
+// Version - ØK DENNE ved hver endring!
+const VERSION = '1.0.2';
+console.log(`SW v${VERSION}: Starting...`);
 
-// Aktiver Workbox debug-logging
-self.__WB_DISABLE_DEV_LOGS = false; 
-console.log('SW: PlenPilot Custom Service Worker starting... Workbox logs should be enabled.');
-
-// 1. Precache all static assets
-console.log('SW: About to call precacheAndRoute with the manifest');
-try {
-  precacheAndRoute(self.__WB_MANIFEST || []); // Eneste bruk av plassholderen
-  console.log('SW: precacheAndRoute executed.');
-} catch (error) {
-  console.error('SW: Error during precacheAndRoute execution:', error);
-}
-
-// 2. Clean up any outdated caches
+// 1. Precache - kun kritiske filer
+precacheAndRoute(self.__WB_MANIFEST || []);
 cleanupOutdatedCaches();
-console.log('SW: cleanupOutdatedCaches called.');
 
-// --- Runtime Caching Regler (Firestore og Bilder fra Test C) ---
-// Firestore API calls
+// 2. Rask Firestore caching med timeout
 registerRoute(
-  ({ url }) => url.protocol === 'https:' && url.hostname === 'firestore.googleapis.com',
+  ({ url }) => url.hostname === 'firestore.googleapis.com',
   new NetworkFirst({
     cacheName: 'firestore-cache',
+    networkTimeoutSeconds: 2, // Maks 2 sek venting
     plugins: [
-      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 7 * 24 * 60 * 60 }),
       new CacheableResponsePlugin({ statuses: [200] }),
     ],
   })
 );
-console.log('SW: Firestore runtime caching rule registered.');
 
-// Images
+// 3. Bilder - cache etter første gang
 registerRoute(
   ({ request }) => request.destination === 'image',
   new StaleWhileRevalidate({
-    cacheName: 'images-cache',
+    cacheName: 'images',
     plugins: [
-      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 }),
     ],
   })
 );
-console.log('SW: Images runtime caching rule registered.');
 
-// --- NYTT: Google Fonts Caching ---
+// 4. Google Fonts
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.googleapis.com',
-  new StaleWhileRevalidate({ cacheName: 'google-fonts-stylesheets' })
+  new StaleWhileRevalidate({ cacheName: 'google-fonts' })
 );
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.gstatic.com',
   new StaleWhileRevalidate({
     cacheName: 'google-fonts-webfonts',
-    plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 })], // 1 year
+    plugins: [new ExpirationPlugin({ maxEntries: 20 })],
   })
 );
-console.log('SW: Google Fonts runtime caching rules registered.');
 
-// --- NYTT: Navigation Route for SPA ---
-const spaFallbackHandler = createHandlerBoundToURL('index.html'); 
-const navigationRoute = new NavigationRoute(spaFallbackHandler, {
-  denylist: [
-    new RegExp('/api/'),            
-    new RegExp('/[^/?]+\\.[^/?]+$'), 
-    new RegExp('/manifest.webmanifest'), 
-  ],
+// 5. SPA navigasjon
+const handler = createHandlerBoundToURL('index.html');
+const navigationRoute = new NavigationRoute(handler, {
+  denylist: [/^\/api\//, /\.[^/?]+$/],
 });
 registerRoute(navigationRoute);
-console.log('SW: SPA NavigationRoute registered.');
 
-
-// --- Service Worker Lifecycle Events (fra Test C) ---
+// 6. RASK OPPDATERING - dette er nøkkelen!
 self.addEventListener('install', (event) => {
-  console.log('SW: Event "install" - Calling self.skipWaiting()');
-  self.skipWaiting(); 
+  console.log(`SW v${VERSION}: Installing...`);
+  // Skip waiting UMIDDELBART
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('SW: Event "activate" - Calling self.clients.claim()');
+  console.log(`SW v${VERSION}: Activating...`);
   event.waitUntil(
-    self.clients.claim().then(() => {
-      console.log('SW: Control claimed by new service worker.');
-      return self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({ type: 'SW_ACTIVATED', payload: 'New service worker is active and has taken control' });
+    (async () => {
+      // Ta kontroll over alle klienter med en gang
+      await self.clients.claim();
+      
+      // Slett gamle cacher
+      const cacheWhitelist = ['firestore-cache', 'images', 'google-fonts', 'google-fonts-webfonts'];
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => {
+          // Slett alle workbox-precache fra tidligere versjoner
+          if (cacheName.includes('workbox-precache') && !cacheName.includes(VERSION)) {
+            console.log(`SW v${VERSION}: Deleting old cache ${cacheName}`);
+            return caches.delete(cacheName);
+          }
+          // Slett andre ukjente cacher
+          if (!cacheWhitelist.includes(cacheName) && !cacheName.includes('workbox-precache')) {
+            console.log(`SW v${VERSION}: Deleting unknown cache ${cacheName}`);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+      
+      // Gi beskjed til alle klienter
+      const clients = await self.clients.matchAll({ type: 'window' });
+      clients.forEach(client => {
+        client.postMessage({ 
+          type: 'SW_ACTIVATED', 
+          version: VERSION 
         });
       });
-    }).catch(error => {
-      console.error('SW: Error during clients.claim() in activate event:', error);
-    })
+    })()
   );
 });
 
-// --- NYTT: Handle messages from the main thread ---
+// 7. Håndter skip waiting melding og FORCE RELOAD
 self.addEventListener('message', (event) => {
-  console.log('SW: Event "message" - Received data:', event.data);
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW: SKIP_WAITING message received, calling self.skipWaiting() again.');
-    self.skipWaiting(); 
+  if (event.data?.type === 'SKIP_WAITING') {
+    console.log(`SW v${VERSION}: SKIP_WAITING received, reloading all clients...`);
+    self.skipWaiting();
+    
+    // Force reload alle vinduer etter kort delay
+    setTimeout(async () => {
+      const clients = await self.clients.matchAll({ type: 'window' });
+      clients.forEach(client => {
+        // navigate() er mer pålitelig enn postMessage for reload
+        client.navigate(client.url);
+      });
+    }, 100);
   }
 });
-
-// --- Error handling ---
-self.addEventListener('error', (event) => {
-  console.error('SW: Service worker error:', event.error, event.message);
-});
-self.addEventListener('unhandledrejection', (event) => {
-  console.error('SW: Unhandled promise rejection:', event.reason);
-  event.preventDefault(); // Vurder om denne er nødvendig basert på feilene du ser
-});
-
-console.log('SW: PlenPilot Custom Service Worker loaded and all event listeners attached.');
