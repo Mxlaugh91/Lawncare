@@ -7,7 +7,12 @@ import { NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
+// For type-hinting i JS-fil for editorer som VS Code
+/// <reference lib="webworker" />
 
+// Aktiver Workbox debug-logging
+self.__WB_DISABLE_DEV_LOGS = false; 
+console.log('SW: PlenPilot Custom Service Worker starting... Workbox logs should be enabled.');
 
 // 1. Precache all static assets
 console.log('SW: About to call precacheAndRoute with self.__WB_MANIFEST');
@@ -97,14 +102,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// --- NYTT: Handle messages from the main thread ---
-self.addEventListener('message', (event) => {
-  console.log('SW: Event "message" - Received data:', event.data);
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('SW: SKIP_WAITING message received, calling self.skipWaiting() again.');
-    self.skipWaiting(); 
-  }
-});
+
 
 // --- Error handling ---
 self.addEventListener('error', (event) => {
