@@ -1,4 +1,4 @@
-// vite.config.ts - Fixed configuration with proper path resolution
+// vite.config.ts - Using generateSW strategy
 
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -11,21 +11,42 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      injectRegister: false,
-      strategies: 'injectManifest',
+      injectRegister: 'auto',
       
-      // Service worker configuration
-      srcDir: 'src',
-      filename: 'sw.js',
-      
-      injectManifest: {
-        swSrc: 'src/sw.js',
-        swDest: 'sw.js',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'firestore-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+            },
+          },
+        ],
       },
       
-      // Include assets for precaching
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
       
       manifest: {
@@ -83,7 +104,6 @@ export default defineConfig({
     host: '0.0.0.0',
   },
   build: {
-    // Split chunks to reduce size
     rollupOptions: {
       output: {
         manualChunks: {
