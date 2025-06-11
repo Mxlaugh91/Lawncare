@@ -53,19 +53,6 @@ registerRoute(
 );
 console.log('SW: Images runtime caching rule registered.');
 
-// --- NYTT: Google Fonts Caching ---
-registerRoute(
-  ({ url }) => url.origin === 'https://fonts.googleapis.com',
-  new StaleWhileRevalidate({ cacheName: 'google-fonts-stylesheets' })
-);
-registerRoute(
-  ({ url }) => url.origin === 'https://fonts.gstatic.com',
-  new StaleWhileRevalidate({
-    cacheName: 'google-fonts-webfonts',
-    plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 })], // 1 year
-  })
-);
-console.log('SW: Google Fonts runtime caching rules registered.');
 
 // --- NYTT: Navigation Route for SPA ---
 const spaFallbackHandler = createHandlerBoundToURL('index.html'); 
@@ -102,7 +89,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-
+// --- NYTT: Handle messages from the main thread ---
+self.addEventListener('message', (event) => {
+  console.log('SW: Event "message" - Received data:', event.data);
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('SW: SKIP_WAITING message received, calling self.skipWaiting() again.');
+    self.skipWaiting(); 
+  }
+});
 
 // --- Error handling ---
 self.addEventListener('error', (event) => {
