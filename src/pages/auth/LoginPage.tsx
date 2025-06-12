@@ -61,7 +61,7 @@ const LoginPage = () => {
           </div>
           <CardTitle className="text-2xl font-bold">Logg inn</CardTitle>
           <CardDescription>
-            Logg inn nisse1000
+            Logg inn for tilgang til plenpilot
           </CardDescription>
         </CardHeader>
         <CardContent>
