@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Wrench
 } from 'lucide-react';
-import { EmployeeSelector, LocationSelector } from '@/components/employee/time-entry';
 import { Location, Mower, User } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
