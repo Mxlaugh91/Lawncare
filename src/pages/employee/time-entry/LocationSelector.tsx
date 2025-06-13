@@ -30,7 +30,7 @@ export const LocationSelector = ({
     if (location.isDueForMaintenanceInSelectedWeek) {
       badges.push(
         <Badge key="maintenance" variant="default" className="text-xs font-medium">
-          <Wrench className="h-3 w-32 mr-1" />
+          <Wrench className="h-3 w-2 mr-4" />
           Plenklipping
         </Badge>
       );
