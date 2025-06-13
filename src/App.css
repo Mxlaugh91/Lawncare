@@ -1,0 +1,9 @@
+#root {
+  margin: 0;
+  padding: 0;
+}
+
+/* Add specific styles for login page */
+.min-h-screen {
+  min-height: 100vh;
+}

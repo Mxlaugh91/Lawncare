@@ -1,0 +1,65 @@
+# Navnet på arbeidsflyten som vises i "Actions"-fanen på GitHub
+name: Deploy to GitHub Pages
+
+# Styrer når denne arbeidsflyten skal kjøre
+on:
+  # Kjør HVER GANG noen pusher kode til "main"-branchen
+  push:
+    branches:
+      - main
+  # Tillater manuell kjøring fra "Actions"-fanen
+  workflow_dispatch:
+
+# Tillatelser som arbeidsflyten trenger for å publisere
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Definerer jobbene som skal kjøres
+jobs:
+  # Jobb 1: Bygge prosjektet
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sjekk ut koden (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Sett opp Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Installer avhengigheter
+        run: npm ci
+
+      - name: Bygg prosjektet
+        run: npm run build
+        env:
+          # --- KORREKSJON HER ---
+          # Map ALLE dine GitHub Secrets til VITE_ miljøvariabler.
+          # Dette sikrer at Vite har tilgang til dem under byggeprosessen.
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Last opp bygge-resultatet (artifact)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  # Jobb 2: Publisere til GitHub Pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publiser til GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
