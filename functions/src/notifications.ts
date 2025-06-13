@@ -273,7 +273,7 @@ export const sendBulkNotifications = functions.https.onCall(async (data, context
 export const cleanupOldNotifications = functions.pubsub
   .schedule('0 2 * * *') // Run daily at 2 AM
   .timeZone('Europe/Oslo')
-  .onRun(async (_context) => {
+  .onRun(async () => {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
