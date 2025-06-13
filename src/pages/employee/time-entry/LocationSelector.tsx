@@ -29,7 +29,7 @@ export const LocationSelector = ({
     
     if (location.isDueForMaintenanceInSelectedWeek) {
       badges.push(
-        <Badge key="maintenance" variant="default" className="text-xs font-medium">
+        <Badge key="maintenance" variant="secondary" className="text-xs font-medium bg-blue-100 text-blue-800 border-blue-200">
           <Wrench className="h-3 w-3 mr-1" />
           Plenklipping
         </Badge>
@@ -38,7 +38,7 @@ export const LocationSelector = ({
     
     if (location.isDueForEdgeCuttingInSelectedWeek) {
       badges.push(
-        <Badge key="edgecutting" variant="secondary" className="text-xs font-medium">
+        <Badge key="edgecutting" variant="outline" className="text-xs font-medium bg-amber-50 text-amber-700 border-amber-200">
           <Scissors className="h-3 w-3 mr-1" />
           Kantklipping
         </Badge>
@@ -73,17 +73,17 @@ export const LocationSelector = ({
                 value={location.id} 
                 className="py-4 px-4 cursor-pointer hover:bg-muted focus:bg-muted active:bg-accent transition-all"
               >
-                <div className="flex flex-col w-full">
-                  <div className="flex items-center justify-between w-full mb-2">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col flex-1">
                     <span className="font-semibold">{location.name}</span>
-                    <div className="flex gap-2">
-                      {getLocationBadges(location)}
-                    </div>
+                    <span className="text-sm text-muted-foreground flex items-center">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {location.address}
+                    </span>
                   </div>
-                  <span className="text-sm text-muted-foreground flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {location.address}
-                  </span>
+                  <div className="flex gap-2 ml-4 flex-shrink-0">
+                    {getLocationBadges(location)}
+                  </div>
                 </div>
               </SelectItem>
             ))}
@@ -100,7 +100,7 @@ export const LocationSelector = ({
         {selectedLocation && (
           <div className="space-y-4 animate-in slide-in-from-bottom-3 duration-500">
             <div className="rounded-xl bg-muted/50 p-5 border">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
                     <CheckCircle2 className="h-5 w-5 text-primary mr-2" />
@@ -111,7 +111,7 @@ export const LocationSelector = ({
                     {selectedLocation.address}
                   </p>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 ml-4 flex-shrink-0">
                   {getLocationBadges(selectedLocation)}
                 </div>
               </div>
@@ -130,7 +130,7 @@ export const LocationSelector = ({
             </div>
 
             {edgeCuttingNeeded && (
-              <Alert className="border-amber-200 bg-amber-50 animate-pulse">
+              <Alert className="border-amber-200 bg-amber-50">
                 <div className="p-1 rounded-full bg-amber-100 mr-2">
                   <Scissors className="h-4 w-4 text-amber-600" />
                 </div>
