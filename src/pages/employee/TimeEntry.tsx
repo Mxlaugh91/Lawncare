@@ -28,6 +28,7 @@ import {
   Wrench
 } from 'lucide-react';
 import { Location, Mower, User } from '@/types';
+import { EmployeeSelector, LocationSelector } from '@/components/employee/time-entry';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
