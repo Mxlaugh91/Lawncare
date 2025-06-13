@@ -305,17 +305,6 @@ const EmployeeTimeEntry = () => {
               </p>
             )}
 
-            {selectedLocation && (
-              <div className="rounded-lg bg-muted p-4 space-y-2">
-                <h3 className="font-medium">{selectedLocation.name}</h3>
-                <p className="text-sm text-muted-foreground">{selectedLocation.address}</p>
-                
-                {selectedLocation.notes && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm font-medium mb-1">Instrukser:</p>
-                    <p className="text-sm">{selectedLocation.notes}</p>
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
