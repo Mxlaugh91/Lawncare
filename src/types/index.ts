@@ -86,13 +86,14 @@ export interface Notification {
   message: string;
   read: boolean;
   createdAt: Timestamp;
-  type: 'job_tagged' | 'service_needed' | 'general';
+  type: 'job_tagged' | 'service_needed' | 'general' | 'time_entry_reminder' | 'manual_job_reminder';
   data?: {
     locationId?: string;
     locationName?: string;
     timeEntryId?: string;
     mowerId?: string;
     mowerName?: string;
+    pendingEntries?: number;
   };
 }
 
