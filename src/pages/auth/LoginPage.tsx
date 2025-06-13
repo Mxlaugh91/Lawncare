@@ -11,6 +11,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Grab as Grass } from 'lucide-react';
 
+// Type for global version
+declare const __APP_VERSION__: string;
+
 const loginSchema = z.object({
   email: z.string().email('Ugyldig e-postadresse'),
   password: z.string().min(6, 'Passordet må være minst 6 tegn'),
@@ -52,8 +55,17 @@ const LoginPage = () => {
     }
   };
 
+  // Få kort versjon (bare "123v" delen)
+  const getShortVersion = () => {
+    try {
+      return __APP_VERSION__.split('_')[0]; // "123v"
+    } catch {
+      return 'dev';
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 relative">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -108,10 +120,23 @@ const LoginPage = () => {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="text-center text-sm text-gray-500">
-          Ta kontakt med administrator for tilgang
+        
+        {/* ALTERNATIV 1: Legg versjon i eksisterende footer */}
+        <CardFooter className="text-center text-sm text-gray-500 space-y-1">
+          <div>Ta kontakt med administrator for tilgang</div>
+          <div>PlenPilot v{getShortVersion()}</div>
         </CardFooter>
       </Card>
+      
+      {/* ALTERNATIV 2: Versjon i hjørnet (bruk ENTEN CardFooter ELLER corner) */}
+      {/* <div className="absolute bottom-4 right-4 text-xs text-gray-400">
+        v{getShortVersion()}
+      </div> */}
+      
+      {/* ALTERNATIV 3: Versjon under hele Card'en (bruk ENTEN CardFooter ELLER dette) */}
+      {/* <div className="mt-4 text-center text-xs text-gray-400">
+        PlenPilot v{getShortVersion()}
+      </div> */}
     </div>
   );
 };
