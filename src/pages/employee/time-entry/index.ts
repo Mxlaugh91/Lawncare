@@ -1,2 +1,2 @@
-typescriptexport { EmployeeSelector } from './EmployeeSelector';
+export { EmployeeSelector } from './EmployeeSelector';
 export { LocationSelector } from './LocationSelector';
