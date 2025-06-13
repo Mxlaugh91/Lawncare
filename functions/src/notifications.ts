@@ -126,7 +126,7 @@ export const sendPushNotification = functions.firestore
             actions: getNotificationActions(type),
           },
           fcmOptions: {
-            link: getNotificationLink(type, customData),
+            link: getNotificationLink(type),
           },
         },
       };
@@ -185,7 +185,7 @@ function getNotificationActions(type?: string): Array<{ action: string; title: s
 /**
  * Helper function to get the appropriate link based on notification type
  */
-function getNotificationLink(type?: string, customData?: Notification['data']): string {
+function getNotificationLink(type?: string): string {
   const baseUrl = '/Lawncare/#/employee';
   
   switch (type) {
