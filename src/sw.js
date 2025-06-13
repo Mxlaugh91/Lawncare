@@ -6,8 +6,8 @@ import { NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// Version - ØK DENNE ved hver endring!
-const VERSION = '1.0.4';
+// 🚀 AUTOMATISK VERSJON - endres ved hver build!
+const VERSION = __VERSION__; // Definert i vite.config.js
 console.log(`SW v${VERSION}: Starting...`);
 
 // 1. Precache - kun kritiske filer
