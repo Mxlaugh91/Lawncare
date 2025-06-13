@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getMessaging, getToken, onMessage, MessagePayload } from 'firebase/messaging';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import * as userService from '@/services/userService';
@@ -12,6 +13,19 @@ export const useFirebaseMessaging = () => {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');
 
+  // Get the service worker registration from vite-plugin-pwa
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(swUrl, registration) {
+      console.log('SW registered:', swUrl);
+    },
+    onOfflineReady() {
+      console.log('App ready for offline use');
+    },
+  });
+
   const requestPermissionAndGetToken = async () => {
     try {
       // Request notification permission
@@ -21,20 +35,28 @@ export const useFirebaseMessaging = () => {
       if (permission === 'granted' && currentUser) {
         const messaging = getMessaging();
         
-        // Get FCM token
-        const token = await getToken(messaging, {
-          vapidKey: vapidKey
-        });
+        // Wait for service worker to be ready
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          
+          // Get FCM token using the existing service worker registration
+          const token = await getToken(messaging, {
+            vapidKey: vapidKey,
+            serviceWorkerRegistration: registration
+          });
 
-        if (token) {
-          setFcmToken(token);
-          
-          // Save token to user profile in Firestore
-          await userService.updateUserFCMToken(currentUser.uid, token);
-          
-          console.log('FCM token saved to user profile:', token);
+          if (token) {
+            setFcmToken(token);
+            
+            // Save token to user profile in Firestore
+            await userService.updateUserFCMToken(currentUser.uid, token);
+            
+            console.log('FCM token saved to user profile:', token);
+          } else {
+            console.log('No registration token available.');
+          }
         } else {
-          console.log('No registration token available.');
+          console.log('Service workers are not supported in this browser.');
         }
       }
     } catch (error) {
