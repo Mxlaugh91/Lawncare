@@ -52,7 +52,7 @@ const timeEntrySchema = z.object({
 
 type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
 
-const EmployeeTimeEntry = () => {
+const TimeEntry = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -535,4 +535,4 @@ const EmployeeTimeEntry = () => {
   );
 };
 
-export default EmployeeTimeEntry;
+export default TimeEntry;
