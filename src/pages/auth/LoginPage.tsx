@@ -58,7 +58,7 @@ const LoginPage = () => {
   // Få kort versjon (bare "123v" delen)
   const getShortVersion = () => {
     try {
-      return __APP_VERSION__.split('_')[0]; // "123v"
+      return __VERSION__.split('_')[0]; // "123v"
     } catch {
       return 'dev';
     }
