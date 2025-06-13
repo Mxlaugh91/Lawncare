@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Grab as Grass } from 'lucide-react';
 
 // Type for global version
-declare const __APP_VERSION__: string;
+declare const __VERSION__: string;
 
 const loginSchema = z.object({
   email: z.string().email('Ugyldig e-postadresse'),
