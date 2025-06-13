@@ -331,7 +331,7 @@ const TimeEntry = () => {
                 <div className="space-y-3">
                   <Label htmlFor="hours" className="text-base font-medium">Timer brukt *</Label>
                   
-                    {/* Quick hour buttons */}
+                  {/* Quick hour buttons */}
                   <div className="grid grid-cols-5 gap-2 mb-4">
                     {quickHours.map((hour) => (
                       <Button
