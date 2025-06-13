@@ -1,4 +1,4 @@
-// src/sw.js - Optimalisert for rask oppdatering med FCM support
+// src/sw.js - Fixed cache management to prevent NotFoundError
 
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
@@ -7,7 +7,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 // Version - ØK DENNE ved hver endring!
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 console.log(`SW v${VERSION}: Starting...`);
 
 // 1. Precache - kun kritiske filer
@@ -162,23 +162,8 @@ self.addEventListener('activate', (event) => {
       // Ta kontroll over alle klienter med en gang
       await self.clients.claim();
       
-      // Slett gamle cacher
-      const cacheWhitelist = ['firestore-cache', 'images', 'google-fonts', 'google-fonts-webfonts'];
-      const cacheNames = await caches.keys();
-      await Promise.all(
-        cacheNames.map(cacheName => {
-          // Slett alle workbox-precache fra tidligere versjoner
-          if (cacheName.includes('workbox-precache') && !cacheName.includes(VERSION)) {
-            console.log(`SW v${VERSION}: Deleting old cache ${cacheName}`);
-            return caches.delete(cacheName);
-          }
-          // Slett andre ukjente cacher
-          if (!cacheWhitelist.includes(cacheName) && !cacheName.includes('workbox-precache')) {
-            console.log(`SW v${VERSION}: Deleting unknown cache ${cacheName}`);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+      // Let Workbox handle all cache cleanup automatically
+      // No manual cache deletion needed - cleanupOutdatedCaches() handles this
       
       // Gi beskjed til alle klienter
       const clients = await self.clients.matchAll({ type: 'window' });
