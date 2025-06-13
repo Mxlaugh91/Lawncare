@@ -1,4 +1,6 @@
-import * as functions from 'firebase-functions';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onCall } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK (only if not already initialized)
@@ -27,16 +29,30 @@ interface Notification {
   createdAt: admin.firestore.FieldValue;
 }
 
+interface BulkNotificationData {
+  userIds: string[];
+  title: string;
+  message: string;
+  type?: string;
+  customData?: Record<string, any>;
+}
+
 /**
  * Cloud Function that triggers when a new notification is created in Firestore
  * and sends a push notification to the target user via FCM
  */
-export const sendPushNotification = functions.firestore
-  .document('notifications/{notificationId}')
-  .onCreate(async (snap, context) => {
+export const sendPushNotification = onDocumentCreated(
+  'notifications/{notificationId}',
+  async (event) => {
     try {
+      const snap = event.data;
+      if (!snap) {
+        console.error('No data in document snapshot');
+        return;
+      }
+
       const notificationData = snap.data() as Notification;
-      const notificationId = context.params.notificationId;
+      const notificationId = event.params.notificationId;
 
       console.log('Processing notification:', notificationId, notificationData);
 
@@ -146,13 +162,16 @@ export const sendPushNotification = functions.firestore
       console.error('Error sending push notification:', error);
       
       // Update the notification document to mark the error
-      await snap.ref.update({
-        pushSent: false,
-        pushError: error instanceof Error ? error.message : 'Unknown error',
-        pushErrorAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      if (event.data) {
+        await event.data.ref.update({
+          pushSent: false,
+          pushError: error instanceof Error ? error.message : 'Unknown error',
+          pushErrorAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
     }
-  });
+  }
+);
 
 /**
  * Helper function to get notification actions based on type
@@ -206,74 +225,78 @@ function getNotificationLink(type?: string): string {
  * Optional: Cloud Function to send bulk notifications
  * Useful for sending notifications to multiple users at once
  */
-export const sendBulkNotifications = functions.https.onCall(async (data, context) => {
-  // Verify that the user is authenticated and is an admin
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
-  }
-
-  const userDoc = await db.collection('users').doc(context.auth.uid).get();
-  const userData = userDoc.data();
-  
-  if (!userData || userData.role !== 'admin') {
-    throw new functions.https.HttpsError('permission-denied', 'Only admins can send bulk notifications');
-  }
-
-  try {
-    const { userIds, title, message, type, customData } = data;
-
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'userIds must be a non-empty array');
+export const sendBulkNotifications = onCall<BulkNotificationData>(
+  async (request) => {
+    // Verify that the user is authenticated and is an admin
+    if (!request.auth) {
+      throw new Error('User must be authenticated');
     }
 
-    if (!title || !message) {
-      throw new functions.https.HttpsError('invalid-argument', 'title and message are required');
-    }
-
-    // Create notifications for each user
-    const batch = db.batch();
-    const notifications: Array<{ id: string; userId: string }> = [];
-
-    userIds.forEach((userId: string) => {
-      const notificationRef = db.collection('notifications').doc();
-      const notificationData = {
-        userId,
-        title,
-        message,
-        type: type || 'general',
-        data: customData || {},
-        read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      
-      batch.set(notificationRef, notificationData);
-      notifications.push({ id: notificationRef.id, userId });
-    });
-
-    await batch.commit();
-
-    console.log(`Successfully created ${notifications.length} bulk notifications`);
+    const userDoc = await db.collection('users').doc(request.auth.uid).get();
+    const userData = userDoc.data();
     
-    return {
-      success: true,
-      notificationsCreated: notifications.length,
-      notifications: notifications
-    };
+    if (!userData || userData.role !== 'admin') {
+      throw new Error('Only admins can send bulk notifications');
+    }
 
-  } catch (error) {
-    console.error('Error sending bulk notifications:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to send bulk notifications');
+    try {
+      const { userIds, title, message, type, customData } = request.data;
+
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        throw new Error('userIds must be a non-empty array');
+      }
+
+      if (!title || !message) {
+        throw new Error('title and message are required');
+      }
+
+      // Create notifications for each user
+      const batch = db.batch();
+      const notifications: Array<{ id: string; userId: string }> = [];
+
+      userIds.forEach((userId: string) => {
+        const notificationRef = db.collection('notifications').doc();
+        const notificationData = {
+          userId,
+          title,
+          message,
+          type: type || 'general',
+          data: customData || {},
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        
+        batch.set(notificationRef, notificationData);
+        notifications.push({ id: notificationRef.id, userId });
+      });
+
+      await batch.commit();
+
+      console.log(`Successfully created ${notifications.length} bulk notifications`);
+      
+      return {
+        success: true,
+        notificationsCreated: notifications.length,
+        notifications: notifications
+      };
+
+    } catch (error) {
+      console.error('Error sending bulk notifications:', error);
+      throw new Error('Failed to send bulk notifications');
+    }
   }
-});
+);
 
 /**
  * Optional: Cloud Function to clean up old notifications
  * Runs daily to remove notifications older than 30 days
  */
-export const cleanupOldNotifications = functions.pubsub
-  .schedule('0 2 * * *') // Run daily at 2 AM
-  .timeZone('Europe/Oslo')
-  .onRun(async () => {
+export const cleanupOldNotifications = onSchedule(
+  {
+    schedule: '0 2 * * *', // Run daily at 2 AM
+    timeZone: 'Europe/Oslo'
+  },
+  async () => {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -300,4 +323,5 @@ export const cleanupOldNotifications = functions.pubsub
     } catch (error) {
       console.error('Error cleaning up old notifications:', error);
     }
-  });
+  }
+);
