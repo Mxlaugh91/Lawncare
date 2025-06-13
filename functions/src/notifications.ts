@@ -9,6 +9,24 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+// Define types for better type safety
+interface Notification {
+  userId: string;
+  title: string;
+  message: string;
+  type?: string;
+  data?: {
+    locationId?: string;
+    locationName?: string;
+    timeEntryId?: string;
+    mowerId?: string;
+    mowerName?: string;
+    pendingEntries?: number;
+  };
+  read: boolean;
+  createdAt: admin.firestore.FieldValue;
+}
+
 /**
  * Cloud Function that triggers when a new notification is created in Firestore
  * and sends a push notification to the target user via FCM
@@ -17,7 +35,7 @@ export const sendPushNotification = functions.firestore
   .document('notifications/{notificationId}')
   .onCreate(async (snap, context) => {
     try {
-      const notificationData = snap.data();
+      const notificationData = snap.data() as Notification;
       const notificationId = context.params.notificationId;
 
       console.log('Processing notification:', notificationId, notificationData);
@@ -167,7 +185,7 @@ function getNotificationActions(type?: string): Array<{ action: string; title: s
 /**
  * Helper function to get the appropriate link based on notification type
  */
-function getNotificationLink(type?: string, customData?: any): string {
+function getNotificationLink(type?: string, customData?: Notification['data']): string {
   const baseUrl = '/Lawncare/#/employee';
   
   switch (type) {
@@ -214,7 +232,7 @@ export const sendBulkNotifications = functions.https.onCall(async (data, context
 
     // Create notifications for each user
     const batch = db.batch();
-    const notifications: any[] = [];
+    const notifications: Array<{ id: string; userId: string }> = [];
 
     userIds.forEach((userId: string) => {
       const notificationRef = db.collection('notifications').doc();
@@ -229,7 +247,7 @@ export const sendBulkNotifications = functions.https.onCall(async (data, context
       };
       
       batch.set(notificationRef, notificationData);
-      notifications.push({ id: notificationRef.id, ...notificationData });
+      notifications.push({ id: notificationRef.id, userId });
     });
 
     await batch.commit();
@@ -239,7 +257,7 @@ export const sendBulkNotifications = functions.https.onCall(async (data, context
     return {
       success: true,
       notificationsCreated: notifications.length,
-      notifications: notifications.map(n => ({ id: n.id, userId: n.userId }))
+      notifications: notifications
     };
 
   } catch (error) {
@@ -255,7 +273,7 @@ export const sendBulkNotifications = functions.https.onCall(async (data, context
 export const cleanupOldNotifications = functions.pubsub
   .schedule('0 2 * * *') // Run daily at 2 AM
   .timeZone('Europe/Oslo')
-  .onRun(async (context) => {
+  .onRun(async (_context) => {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
