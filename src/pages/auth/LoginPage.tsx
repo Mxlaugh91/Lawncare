@@ -122,7 +122,7 @@ const LoginPage = () => {
         </CardContent>
         
         {/* ALTERNATIV 1: Legg versjon i eksisterende footer */}
-        <CardFooter className="text-center text-sm text-gray-500 space-y-1">
+        <CardFooter className="flex flex-col text-center text-sm text-gray-500 space-y-1">
           <div>Ta kontakt med administrator for tilgang</div>
           <div>PlenPilot v{getShortVersion()}</div>
         </CardFooter>
