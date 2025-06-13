@@ -31,6 +31,7 @@ import * as timeEntryService from '@/services/timeEntryService';
 import * as userService from '@/services/userService';
 import * as notificationService from '@/services/notificationService';
 import { getISOWeekNumber, getISOWeekDates, formatDateToShortLocale } from '@/lib/utils';
+import { EmployeeSelector, LocationSelector } from '@/components/employee/time-entry';
 
 const timeEntrySchema = z.object({
   locationId: z.string({
