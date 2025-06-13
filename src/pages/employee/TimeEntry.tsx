@@ -294,18 +294,7 @@ const EmployeeTimeEntry = () => {
                       <span className="font-medium">{location.name}</span>
                       <span className="text-sm text-muted-foreground">{location.address}</span>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.locationId && (
-              <p className="text-sm text-destructive flex items-center">
-                <AlertCircle className="mr-1 h-3 w-3" />
-                {errors.locationId.message}
-              </p>
-            )}
 
-              </div>
             )}
           </CardContent>
         </Card>
