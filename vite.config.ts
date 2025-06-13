@@ -1,12 +1,40 @@
-// vite.config.ts - Fikset for React vendor error
+// vite.config.ts - Med automatisk versjonering
 import path from 'path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { execSync } from 'child_process';
+
+// 🚀 Automatisk versjonering: 1v, 2v, 3v, etc.
+function getVersion() {
+  try {
+    // Få commit count for auto-incrementing nummer
+    const commitCount = execSync('git rev-list --count HEAD').toString().trim();
+    
+    // Få git hash
+    const gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+    
+    // Lag timestamp
+    const timestamp = Date.now();
+    
+    // Format: 1v_a1b2c3d_1698765432000
+    return `${commitCount}v_${gitHash}_${timestamp}`;
+  } catch (error) {
+    // Fallback hvis git ikke er tilgjengelig
+    console.warn('Git ikke tilgjengelig, bruker fallback versjon');
+    return `dev_${Date.now()}`;
+  }
+}
 
 export default defineConfig({
   base: '/Lawncare/',
+  
+  // ✨ Definer automatisk versjon
+  define: {
+    __VERSION__: JSON.stringify(getVersion())
+  },
+  
   plugins: [
     react(),
     VitePWA({
