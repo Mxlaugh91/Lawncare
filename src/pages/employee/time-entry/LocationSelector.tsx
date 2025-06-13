@@ -106,10 +106,6 @@ export const LocationSelector = ({
                     <CheckCircle2 className="h-5 w-5 text-primary mr-2" />
                     <h3 className="font-semibold">{selectedLocation.name}</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {selectedLocation.address}
-                  </p>
                 </div>
                 <div className="flex flex-col gap-2 ml-4 flex-shrink-0">
                   {getLocationBadges(selectedLocation)}
