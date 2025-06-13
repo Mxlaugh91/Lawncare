@@ -39,7 +39,7 @@ export const LocationSelector = ({
     if (location.isDueForEdgeCuttingInSelectedWeek) {
       badges.push(
         <Badge key="edgecutting" variant="secondary" className="text-xs font-medium">
-          <Scissors className="h-3 w-3 mr-1" />
+          <Scissors className="h-3 w-1 mr-1" />
           Kantklipping
         </Badge>
       );
