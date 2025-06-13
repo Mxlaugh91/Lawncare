@@ -12,23 +12,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   AlertCircle, 
   Clock, 
   Scissors, 
   Calendar, 
-  Users, 
-  MapPin,
   ChevronDown,
   CheckCircle2,
   Wrench
 } from 'lucide-react';
-import { Location, Mower, User } from '@/types';
 import { EmployeeSelector, LocationSelector } from '@/components/employee/time-entry';
+import { Location, Mower, User } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
@@ -272,54 +268,15 @@ const EmployeeTimeEntry = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Location Selection */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-lg">
-              <MapPin className="mr-2 h-5 w-5 text-primary" />
-              Velg sted
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Select
-              onValueChange={(value) => setValue('locationId', value)}
-              defaultValue={selectedLocationId}
-            >
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Velg hvilket sted du skal jobbe på" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((location) => (
-                  <SelectItem key={location.id} value={location.id} className="py-3">
-                    <div className="flex flex-col">
-                      <span className="font-medium">{location.name}</span>
-                      <span className="text-sm text-muted-foreground">{location.address}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.locationId && (
-              <p className="text-sm text-destructive flex items-center">
-                <AlertCircle className="mr-1 h-3 w-3" />
-                {errors.locationId.message}
-              </p>
-            )}
-
-            {selectedLocation && (
-              <div className="rounded-lg bg-muted p-4 space-y-2">
-                <h3 className="font-medium">{selectedLocation.name}</h3>
-                <p className="text-sm text-muted-foreground">{selectedLocation.address}</p>
-                
-                {selectedLocation.notes && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm font-medium mb-1">Instrukser:</p>
-                    <p className="text-sm">{selectedLocation.notes}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <LocationSelector
+          locations={locations}
+          selectedLocationId={selectedLocationId}
+          selectedLocation={selectedLocation}
+          onLocationChange={(value) => setValue('locationId', value)}
+          edgeCuttingNeeded={edgeCuttingNeeded}
+          error={errors.locationId?.message}
+          currentWeek={currentWeek}
+        />
 
         {/* Time Entry */}
         {selectedLocation && (
@@ -423,56 +380,15 @@ const EmployeeTimeEntry = () => {
           </Collapsible>
         )}
 
-        {/* Team Members - Collapsible */}
-        {selectedLocation && employees.length > 0 && (
-          <Collapsible open={isEmployeeSectionOpen} onOpenChange={setIsEmployeeSectionOpen}>
-            <Card>
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                  <CardTitle className="flex items-center justify-between text-lg">
-                    <div className="flex items-center">
-                      <Users className="mr-2 h-5 w-5 text-muted-foreground" />
-                      Andre på jobb
-                      <Badge variant="outline" className="ml-2">
-                        {selectedEmployees.length > 0 ? `${selectedEmployees.length} valgt` : 'Valgfritt'}
-                      </Badge>
-                    </div>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isEmployeeSectionOpen ? 'rotate-180' : ''}`} />
-                  </CardTitle>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent>
-                  <div className="space-y-3">
-                    {employees.map((employee) => (
-                      <div
-                        key={employee.id}
-                        className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                          selectedEmployees.includes(employee.id)
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-muted-foreground'
-                        }`}
-                        onClick={() => handleEmployeeToggle(employee.id)}
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className={selectedEmployees.includes(employee.id) ? 'bg-primary text-primary-foreground' : ''}>
-                            {employee.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="font-medium">{employee.name}</p>
-                          <p className="text-sm text-muted-foreground">{employee.email}</p>
-                        </div>
-                        {selectedEmployees.includes(employee.id) && (
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+        {/* Team Members */}
+        {selectedLocation && (
+          <EmployeeSelector
+            employees={employees}
+            selectedEmployees={selectedEmployees}
+            onEmployeeToggle={handleEmployeeToggle}
+            isOpen={isEmployeeSectionOpen}
+            onOpenChange={setIsEmployeeSectionOpen}
+          />
         )}
 
         {/* Notes */}
