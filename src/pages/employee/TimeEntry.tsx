@@ -266,36 +266,36 @@ const TimeEntry = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-purple-50/30">
+    <div className="min-h-screen bg-background">
       <div className="space-y-6 p-4 pb-24 md:pb-8 max-w-2xl mx-auto">
         {/* Enhanced Header */}
         <div className="text-center space-y-4 py-6">
-          <div className="inline-flex items-center justify-center p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 mb-4">
-            <Timer className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
+            <Timer className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold text-foreground">
             Registrer timer
           </h1>
-          <div className="flex items-center justify-center space-x-3 text-sm text-gray-600 bg-white/60 rounded-full px-4 py-2 backdrop-blur-sm border border-gray-200">
-            <Calendar className="h-4 w-4 text-blue-500" />
+          <div className="flex items-center justify-center space-x-3 text-sm text-muted-foreground bg-card/60 rounded-full px-4 py-2 backdrop-blur-sm border">
+            <Calendar className="h-4 w-4 text-primary" />
             <span className="font-medium">Uke {currentWeek}</span>
-            <span className="text-gray-400">•</span>
+            <span className="text-muted-foreground/50">•</span>
             <span>({formatDateToShortLocale(weekDates.start)} - {formatDateToShortLocale(weekDates.end)})</span>
           </div>
         </div>
 
         {locations.length === 0 && (
-          <Card className="border-0 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg">
+          <Card className="card-hover border-0 bg-primary/5">
             <CardContent className="flex flex-col items-center text-center p-8 space-y-4">
-              <div className="p-4 rounded-full bg-green-100">
-                <CheckCircle2 className="h-12 w-12 text-green-600" />
+              <div className="p-4 rounded-full bg-primary/10">
+                <CheckCircle2 className="h-12 w-12 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-green-900">Alle oppgaver fullført! 🎉</h3>
-              <p className="text-green-700 max-w-sm">
+              <h3 className="text-xl font-semibold text-primary">Alle oppgaver fullført! 🎉</h3>
+              <p className="text-muted-foreground max-w-sm">
                 Flott jobba! Du har ingen steder som trenger vedlikehold denne uken.
               </p>
               <div className="flex space-x-2">
-                <Badge className="bg-green-100 text-green-800 border-green-200">
+                <Badge className="bg-primary/10 text-primary border-primary/20">
                   <Sparkles className="h-3 w-3 mr-1" />
                   Perfekt score
                 </Badge>
@@ -318,11 +318,11 @@ const TimeEntry = () => {
 
           {/* Enhanced Time Entry */}
           {selectedLocation && (
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-blue-50/30">
+            <Card className="card-hover">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg font-semibold">
-                  <div className="p-2 rounded-full bg-blue-100 mr-3">
-                    <Clock className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 rounded-full bg-primary/10 mr-3">
+                    <Clock className="h-5 w-5 text-primary" />
                   </div>
                   Tidsbruk
                 </CardTitle>
@@ -335,6 +335,15 @@ const TimeEntry = () => {
                   <div className="grid grid-cols-5 gap-2 mb-4">
                     {quickHours.map((hour) => (
                       <Button
+                        key={hour}
+                        type="button"
+                        variant={selectedHours === hour ? "default" : "outline"}
+                        size="sm"
+                        className={`h-10 text-sm font-medium transition-all duration-200 button-effect ${
+                          selectedHours === hour 
+                            ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                            : 'hover:bg-primary/10 hover:border-primary/50'
+                        }`}<Button
                         key={hour}
                         type="button"
                         variant={selectedHours === hour ? "default" : "outline"}
@@ -357,11 +366,11 @@ const TimeEntry = () => {
                     step="0.25"
                     min="0.25"
                     placeholder="Eller skriv inn timer..."
-                    className="h-14 text-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                    className="h-14 text-lg border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                     {...register('hours')}
                   />
                   {errors.hours && (
-                    <p className="text-sm text-red-600 flex items-center animate-in slide-in-from-left-2 duration-300">
+                    <p className="text-sm text-destructive flex items-center animate-in slide-in-from-left-2 duration-300">
                       <AlertCircle className="mr-2 h-4 w-4" />
                       {errors.hours.message}
                     </p>
@@ -373,11 +382,11 @@ const TimeEntry = () => {
 
           {/* Enhanced Edge Cutting */}
           {selectedLocation && (
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-amber-50/30">
+            <Card className="card-hover">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50 border border-amber-200">
                   <div className="flex-1">
-                    <Label htmlFor="edgeCuttingDone" className="text-base font-semibold flex items-center text-gray-900">
+                    <Label htmlFor="edgeCuttingDone" className="text-base font-semibold flex items-center">
                       <div className="p-2 rounded-full bg-amber-100 mr-3">
                         <Scissors className="h-5 w-5 text-amber-600" />
                       </div>
@@ -390,7 +399,7 @@ const TimeEntry = () => {
                       </p>
                     )}
                     {edgeCuttingDone && (
-                      <p className="text-sm text-green-700 flex items-center mt-2 ml-11">
+                      <p className="text-sm text-primary flex items-center mt-2 ml-11">
                         <CheckCircle2 className="mr-1 h-3 w-3" />
                         Kantklipping registrert
                       </p>
@@ -405,7 +414,7 @@ const TimeEntry = () => {
                         navigator.vibrate(50);
                       }
                     }}
-                    className="scale-125 data-[state=checked]:bg-green-500"
+                    className="scale-125 data-[state=checked]:bg-primary"
                   />
                 </div>
               </CardContent>
@@ -415,21 +424,21 @@ const TimeEntry = () => {
           {/* Enhanced Equipment Selection */}
           {selectedLocation && (
             <Collapsible open={isEquipmentSectionOpen} onOpenChange={setIsEquipmentSectionOpen}>
-              <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50/50">
+              <Card className="card-hover">
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-gray-50/50 active:bg-gray-100/50 transition-all duration-200">
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 active:bg-muted transition-all duration-200">
                     <CardTitle className="flex items-center justify-between text-lg font-semibold">
                       <div className="flex items-center">
-                        <div className="p-2 rounded-full bg-gray-100 mr-3">
-                          <Wrench className="h-5 w-5 text-gray-600" />
+                        <div className="p-2 rounded-full bg-muted mr-3">
+                          <Wrench className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div className="flex flex-col items-start">
-                          <span className="text-gray-900">Utstyr brukt</span>
-                          <span className="text-xs text-gray-500 font-normal">Hvilken gressklipper ble brukt?</span>
+                          <span>Utstyr brukt</span>
+                          <span className="text-xs text-muted-foreground font-normal">Hvilken gressklipper ble brukt?</span>
                         </div>
-                        <Badge variant="outline" className="ml-3 border-gray-300">Valgfritt</Badge>
+                        <Badge variant="outline" className="ml-3">Valgfritt</Badge>
                       </div>
-                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-gray-400 ${isEquipmentSectionOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-muted-foreground ${isEquipmentSectionOpen ? 'rotate-180' : ''}`} />
                     </CardTitle>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -438,18 +447,18 @@ const TimeEntry = () => {
                     <Select
                       onValueChange={(value) => setValue('mowerId', value === 'none' ? null : value)}
                     >
-                      <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-gray-300 transition-colors">
+                      <SelectTrigger className="h-12 border-2 hover:border-primary/50 transition-colors">
                         <SelectValue placeholder="🚜 Velg gressklipper" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none" className="py-3">
-                          <span className="text-gray-600">Ingen gressklipper brukt</span>
+                          <span className="text-muted-foreground">Ingen gressklipper brukt</span>
                         </SelectItem>
                         {mowers.map((mower) => (
                           <SelectItem key={mower.id} value={mower.id} className="py-3">
                             <div className="flex flex-col">
                               <span className="font-medium">{mower.name}</span>
-                              <span className="text-sm text-gray-500">{mower.model}</span>
+                              <span className="text-sm text-muted-foreground">{mower.model}</span>
                             </div>
                           </SelectItem>
                         ))}
@@ -475,21 +484,21 @@ const TimeEntry = () => {
           {/* Enhanced Notes */}
           {selectedLocation && (
             <Collapsible open={isNotesSectionOpen} onOpenChange={setIsNotesSectionOpen}>
-              <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-green-50/30">
+              <Card className="card-hover">
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-green-50/30 active:bg-green-100/30 transition-all duration-200">
+                  <CardHeader className="cursor-pointer hover:bg-muted/30 active:bg-muted transition-all duration-200">
                     <CardTitle className="flex items-center justify-between text-lg font-semibold">
                       <div className="flex items-center">
-                        <div className="p-2 rounded-full bg-green-100 mr-3">
-                          <FileText className="h-5 w-5 text-green-600" />
+                        <div className="p-2 rounded-full bg-primary/10 mr-3">
+                          <FileText className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col items-start">
-                          <span className="text-gray-900">Notater</span>
-                          <span className="text-xs text-gray-500 font-normal">Legg til merknader om jobben</span>
+                          <span>Notater</span>
+                          <span className="text-xs text-muted-foreground font-normal">Legg til merknader om jobben</span>
                         </div>
-                        <Badge variant="outline" className="ml-3 border-gray-300">Valgfritt</Badge>
+                        <Badge variant="outline" className="ml-3">Valgfritt</Badge>
                       </div>
-                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-gray-400 ${isNotesSectionOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-muted-foreground ${isNotesSectionOpen ? 'rotate-180' : ''}`} />
                     </CardTitle>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -497,7 +506,7 @@ const TimeEntry = () => {
                   <CardContent>
                     <Textarea
                       placeholder="💭 Skriv eventuelle merknader om jobben her..."
-                      className="min-h-[100px] resize-none border-2 border-gray-200 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all"
+                      className="min-h-[100px] resize-none border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                       {...register('notes')}
                     />
                   </CardContent>
@@ -511,7 +520,7 @@ const TimeEntry = () => {
             <div className="sticky bottom-4 z-10">
               <Button 
                 onClick={handleSubmit(onSubmit)}
-                className="w-full h-16 text-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]" 
+                className="w-full h-16 text-lg font-semibold bg-primary hover:bg-primary/90 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] button-effect" 
                 disabled={isSubmitting}
                 size="lg"
               >
