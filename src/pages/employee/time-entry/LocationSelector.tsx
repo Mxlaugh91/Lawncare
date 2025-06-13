@@ -97,23 +97,6 @@ export const LocationSelector = ({
           </Alert>
         )}
 
-        {selectedLocation && (
-          <div className="space-y-4 animate-in slide-in-from-bottom-3 duration-500">
-            <div className="rounded-xl bg-muted/50 p-5 border">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary mr-2" />
-                    <h3 className="font-semibold">{selectedLocation.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {selectedLocation.address}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {getLocationBadges(selectedLocation)}
-                </div>
               </div>
               
               {selectedLocation.notes && (
