@@ -331,7 +331,7 @@ const TimeEntry = () => {
                 <div className="space-y-3">
                   <Label htmlFor="hours" className="text-base font-medium">Timer brukt *</Label>
                   
-                  {/* Quick hour buttons */}
+              {/* Quick hour buttons */}
                   <div className="grid grid-cols-5 gap-2 mb-4">
                     {quickHours.map((hour) => (
                       <Button
@@ -343,20 +343,13 @@ const TimeEntry = () => {
                           selectedHours === hour 
                             ? 'bg-primary text-primary-foreground shadow-md scale-105' 
                             : 'hover:bg-primary/10 hover:border-primary/50'
-                        }`}<Button
-                        key={hour}
-                        type="button"
-                        variant={selectedHours === hour ? "default" : "outline"}
-                        size="sm"
-                        className={`h-10 text-sm font-medium transition-all duration-200 ${
-                          selectedHours === hour 
-                            ? 'bg-blue-500 text-white shadow-md scale-105' 
-                            : 'hover:bg-blue-50 hover:border-blue-300 active:scale-95'
                         }`}
                         onClick={() => handleQuickHourSelect(hour)}
                       >
                         {hour}h
                       </Button>
+                    ))}
+                  </div>
                     ))}
                   </div>
                   
