@@ -34,7 +34,6 @@ import * as timeEntryService from '@/services/timeEntryService';
 import * as userService from '@/services/userService';
 import * as notificationService from '@/services/notificationService';
 import { getISOWeekNumber, getISOWeekDates, formatDateToShortLocale } from '@/lib/utils';
-import { EmployeeSelector, LocationSelector } from '@/components/employee/time-entry';
 
 const timeEntrySchema = z.object({
   locationId: z.string({
@@ -294,7 +293,29 @@ const EmployeeTimeEntry = () => {
                       <span className="font-medium">{location.name}</span>
                       <span className="text-sm text-muted-foreground">{location.address}</span>
                     </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.locationId && (
+              <p className="text-sm text-destructive flex items-center">
+                <AlertCircle className="mr-1 h-3 w-3" />
+                {errors.locationId.message}
+              </p>
+            )}
 
+            {selectedLocation && (
+              <div className="rounded-lg bg-muted p-4 space-y-2">
+                <h3 className="font-medium">{selectedLocation.name}</h3>
+                <p className="text-sm text-muted-foreground">{selectedLocation.address}</p>
+                
+                {selectedLocation.notes && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm font-medium mb-1">Instrukser:</p>
+                    <p className="text-sm">{selectedLocation.notes}</p>
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
