@@ -73,17 +73,12 @@ export const LocationSelector = ({
                 value={location.id} 
                 className="py-4 px-4 cursor-pointer hover:bg-muted focus:bg-muted active:bg-accent transition-all"
               >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex flex-col flex-1">
-                    <span className="font-semibold">{location.name}</span>
-                    <span className="text-sm text-muted-foreground flex items-center">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {location.address}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 ml-4 flex-shrink-0">
-                    {getLocationBadges(location)}
-                  </div>
+                <div className="flex flex-col w-full">
+                  <span className="font-semibold">{location.name}</span>
+                  <span className="text-sm text-muted-foreground flex items-center">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {location.address}
+                  </span>
                 </div>
               </SelectItem>
             ))}
