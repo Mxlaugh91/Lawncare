@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -30,6 +31,9 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Initialize Firebase messaging
+  useFirebaseMessaging();
 
   const handleLogout = async () => {
     try {

@@ -7,6 +7,7 @@ import {
   where, 
   orderBy,
   addDoc,
+  updateDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -87,5 +88,31 @@ export const addEmployee = async (employeeData: { email: string; name: string; }
   } catch (error) {
     console.error('Error adding employee:', error);
     throw new Error('Kunne ikke legge til ny ansatt');
+  }
+};
+
+export const updateUserFCMToken = async (userId: string, fcmToken: string) => {
+  try {
+    const docRef = doc(db, 'users', userId);
+    await updateDoc(docRef, {
+      fcmToken,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating FCM token:', error);
+    throw new Error('Kunne ikke oppdatere FCM token');
+  }
+};
+
+export const removeUserFCMToken = async (userId: string) => {
+  try {
+    const docRef = doc(db, 'users', userId);
+    await updateDoc(docRef, {
+      fcmToken: null,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error removing FCM token:', error);
+    throw new Error('Kunne ikke fjerne FCM token');
   }
 };

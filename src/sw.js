@@ -1,4 +1,4 @@
-// src/sw.js - Optimalisert for rask oppdatering
+// src/sw.js - Optimalisert for rask oppdatering med FCM support
 
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
@@ -7,7 +7,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 // Version - ØK DENNE ved hver endring!
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 console.log(`SW v${VERSION}: Starting...`);
 
 // 1. Precache - kun kritiske filer
@@ -58,7 +58,97 @@ const navigationRoute = new NavigationRoute(handler, {
 });
 registerRoute(navigationRoute);
 
-// 6. RASK OPPDATERING - dette er nøkkelen!
+// 6. FCM Background Message Handler
+self.addEventListener('push', (event) => {
+  console.log(`SW v${VERSION}: Push event received`, event);
+  
+  if (event.data) {
+    const data = event.data.json();
+    console.log('Push data:', data);
+    
+    const { notification, data: customData } = data;
+    
+    if (notification) {
+      const notificationOptions = {
+        body: notification.body,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-192x192.png',
+        data: customData,
+        tag: customData?.type || 'general',
+        requireInteraction: true,
+        actions: []
+      };
+
+      // Add action buttons based on notification type
+      if (customData?.type === 'job_tagged') {
+        notificationOptions.actions = [
+          {
+            action: 'open_time_entry',
+            title: 'Registrer timer'
+          },
+          {
+            action: 'dismiss',
+            title: 'Lukk'
+          }
+        ];
+      } else if (customData?.type === 'time_entry_reminder') {
+        notificationOptions.actions = [
+          {
+            action: 'open_pending',
+            title: 'Se ufullførte'
+          },
+          {
+            action: 'dismiss',
+            title: 'Lukk'
+          }
+        ];
+      }
+
+      event.waitUntil(
+        self.registration.showNotification(notification.title, notificationOptions)
+      );
+    }
+  }
+});
+
+// 7. Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  console.log(`SW v${VERSION}: Notification click`, event);
+  
+  event.notification.close();
+  
+  const { action, data } = event;
+  let urlToOpen = '/Lawncare/#/employee';
+  
+  // Determine URL based on action and notification type
+  if (action === 'open_time_entry' || data?.type === 'job_tagged') {
+    urlToOpen = '/Lawncare/#/employee/timeregistrering';
+  } else if (action === 'open_pending' || data?.type === 'time_entry_reminder') {
+    urlToOpen = '/Lawncare/#/employee/historikk';
+  } else if (data?.type === 'manual_job_reminder') {
+    urlToOpen = '/Lawncare/#/employee';
+  }
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if app is already open
+      for (const client of clientList) {
+        if (client.url.includes('/Lawncare/') && 'focus' in client) {
+          client.focus();
+          client.navigate(urlToOpen);
+          return;
+        }
+      }
+      
+      // Open new window if app is not open
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// 8. RASK OPPDATERING - dette er nøkkelen!
 self.addEventListener('install', (event) => {
   console.log(`SW v${VERSION}: Installing...`);
   // Skip waiting UMIDDELBART
@@ -102,7 +192,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 7. Håndter skip waiting melding og FORCE RELOAD
+// 9. Håndter skip waiting melding og FORCE RELOAD
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     console.log(`SW v${VERSION}: SKIP_WAITING received, reloading all clients...`);
