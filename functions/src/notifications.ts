@@ -34,7 +34,7 @@ interface BulkNotificationData {
   title: string;
   message: string;
   type?: string;
-  customData?: Record<string, any>;
+  customData?: Record<string, unknown>;
 }
 
 /**
