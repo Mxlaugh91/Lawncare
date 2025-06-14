@@ -1,4 +1,4 @@
-// src/sw.js - Fixed cache management to prevent NotFoundError
+// src/sw.js - Renset service worker uten manuell SKIP_WAITING håndtering
 
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
@@ -148,10 +148,10 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// 8. RASK OPPDATERING - dette er nøkkelen!
+// 8. AUTOMATISK OPPDATERING - skipWaiting umiddelbart
 self.addEventListener('install', (event) => {
   console.log(`SW v${VERSION}: Installing...`);
-  // Skip waiting UMIDDELBART
+  // Skip waiting UMIDDELBART for automatisk oppdatering
   self.skipWaiting();
 });
 
@@ -165,7 +165,7 @@ self.addEventListener('activate', (event) => {
       // Let Workbox handle all cache cleanup automatically
       // No manual cache deletion needed - cleanupOutdatedCaches() handles this
       
-      // Gi beskjed til alle klienter
+      // Gi beskjed til alle klienter om ny versjon
       const clients = await self.clients.matchAll({ type: 'window' });
       clients.forEach(client => {
         client.postMessage({ 
@@ -177,19 +177,5 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 9. Håndter skip waiting melding og FORCE RELOAD
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    console.log(`SW v${VERSION}: SKIP_WAITING received, reloading all clients...`);
-    self.skipWaiting();
-    
-    // Force reload alle vinduer etter kort delay
-    setTimeout(async () => {
-      const clients = await self.clients.matchAll({ type: 'window' });
-      clients.forEach(client => {
-        // navigate() er mer pålitelig enn postMessage for reload
-        client.navigate(client.url);
-      });
-    }, 100);
-  }
-});
+// Fjernet: self.addEventListener('message', ...) for SKIP_WAITING
+// Dette er ikke lenger nødvendig med automatisk oppdatering
