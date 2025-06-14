@@ -29,15 +29,13 @@ import {
   Zap
 } from 'lucide-react';
 import { Location, Mower, User } from '@/types';
+import * as locationService from '@/services/locationService';
+import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
+import * as userService from '@/services/userService';
 import * as notificationService from '@/services/notificationService';
 import { getISOWeekNumber, getISOWeekDates, formatDateToShortLocale } from '@/lib/utils';
 import { EmployeeSelector, LocationSelector } from '@/pages/employee/time-entry';
-
-// Import Zustand stores
-import { useLocationStore } from '@/store/locationStore';
-import { useEquipmentStore } from '@/store/equipmentStore';
-import { useUserStore } from '@/store/userStore';
 
 const timeEntrySchema = z.object({
   locationId: z.string({
@@ -57,30 +55,10 @@ type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
 const TimeEntry = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  
-  // Use Zustand stores instead of local state
-  const { 
-    getLocationsWithWeeklyStatus, 
-    loading: locationsLoading, 
-    error: locationsError 
-  } = useLocationStore();
-  
-  const { 
-    mowers, 
-    fetchMowers, 
-    loading: mowersLoading, 
-    error: mowersError 
-  } = useEquipmentStore();
-  
-  const { 
-    users, 
-    fetchUsers, 
-    loading: usersLoading, 
-    error: usersError 
-  } = useUserStore();
-
-  // Local state for component-specific data
+  const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [mowers, setMowers] = useState<Mower[]>([]);
+  const [employees, setEmployees] = useState<User[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [edgeCuttingNeeded, setEdgeCuttingNeeded] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
@@ -90,10 +68,6 @@ const TimeEntry = () => {
   
   const currentWeek = getISOWeekNumber(new Date());
   const weekDates = getISOWeekDates(currentWeek);
-
-  // Combine loading states
-  const loading = locationsLoading || mowersLoading || usersLoading;
-  const hasError = locationsError || mowersError || usersError;
 
   const {
     register,
@@ -121,24 +95,13 @@ const TimeEntry = () => {
   // Quick hour suggestions
   const quickHours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
-  // Filter employees to exclude current user
-  const employees = users.filter(emp => emp.id !== currentUser?.uid);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Use Promise.all to fetch data in parallel from Zustand stores
-        await Promise.all([
-          // Fetch mowers if not already loaded
-          mowers.length === 0 ? fetchMowers() : Promise.resolve(),
-          // Fetch users if not already loaded  
-          users.length === 0 ? fetchUsers() : Promise.resolve(),
-        ]);
-
-        // Get locations with weekly status
-        const locationsWithStatus = await getLocationsWithWeeklyStatus(currentWeek);
+        setLoading(true);
         
-        // Filter available locations for time entry
+        const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
+        
         const availableLocations = locationsWithStatus.filter(loc => {
           if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
           if (loc.status === 'fullfort') return false;
@@ -163,7 +126,14 @@ const TimeEntry = () => {
           isDueForEdgeCuttingInSelectedWeek: loc.isDueForEdgeCuttingInSelectedWeek,
         }));
 
+        const [mowerData, employeeData] = await Promise.all([
+          equipmentService.getAllMowers(),
+          userService.getAllEmployees()
+        ]);
+        
         setLocations(availableLocations);
+        setMowers(mowerData);
+        setEmployees(employeeData.filter(emp => emp.id !== currentUser?.uid));
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -171,11 +141,13 @@ const TimeEntry = () => {
           description: 'Kunne ikke hente nødvendig data. Prøv igjen senere.',
           variant: 'destructive',
         });
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [currentUser, currentWeek, fetchMowers, fetchUsers, getLocationsWithWeeklyStatus, mowers.length, users.length, toast]);
+  }, [toast, currentUser, currentWeek]);
 
   useEffect(() => {
     if (selectedLocationId) {
@@ -286,64 +258,14 @@ const TimeEntry = () => {
     }
   };
 
-  // Show error state if there are any errors
-  if (hasError) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center text-center p-8 space-y-4">
-            <div className="p-4 rounded-full bg-destructive/10">
-              <AlertCircle className="h-12 w-12 text-destructive" />
-            </div>
-            <h3 className="text-xl font-semibold text-destructive">Feil ved lasting</h3>
-            <p className="text-muted-foreground">
-              {locationsError || mowersError || usersError}
-            </p>
-            <Button onClick={() => window.location.reload()}>
-              Prøv igjen
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="space-y-6 p-4 pb-24 md:pb-8 max-w-2xl mx-auto">
-          {/* Enhanced Header Skeleton */}
-          <div className="text-center space-y-4 py-6">
-            <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
-              <Timer className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl animate-pulse" />
-            <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full animate-pulse mx-auto w-64" />
-          </div>
-
-          {/* Loading skeletons for different sections */}
-          <div className="space-y-6">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center">
-                    <div className="p-2 rounded-full bg-gray-200 mr-3 w-10 h-10" />
-                    <div className="h-6 bg-gray-200 rounded w-32" />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="h-12 bg-gray-200 rounded" />
-                  {i === 1 && (
-                    <div className="grid grid-cols-5 gap-2">
-                      {[...Array(5)].map((_, j) => (
-                        <div key={j} className="h-10 bg-gray-200 rounded" />
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <div className="space-y-4 p-6 animate-pulse">
+        <div className="h-12 bg-gradient-to-r from-blue-200 to-purple-200 rounded-xl" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl" />
+          ))}
         </div>
       </div>
     );
