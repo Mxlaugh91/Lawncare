@@ -1,4 +1,4 @@
-// vite.config.ts - Med automatisk versjonering
+// vite.config.ts - Med automatisk versjonering og autoUpdate
 import path from 'path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -38,7 +38,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate', // Endret fra 'prompt' til 'autoUpdate'
       injectRegister: 'auto',
       strategies: 'injectManifest',
       srcDir: 'src',

@@ -1,11 +1,9 @@
-// src/components/PwaUpdater.tsx - Forenklet og rask versjon
+// src/components/PwaUpdater.tsx - Automatisk PWA oppdatering uten brukerinteraksjon
 
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 function PwaUpdater() {
-  const [showReload, setShowReload] = useState(false);
-  
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -13,7 +11,7 @@ function PwaUpdater() {
     onRegisteredSW(swUrl, registration) {
       console.log('SW registered:', swUrl);
       
-      // Sjekk for oppdateringer hver 30. minutt (ikke hver time)
+      // Sjekk for oppdateringer hver 30. minutt
       if (registration) {
         setInterval(() => {
           registration.update();
@@ -25,34 +23,16 @@ function PwaUpdater() {
     },
   });
 
-  // Vis reload-knapp når oppdatering er klar
+  // Automatisk oppdatering når ny versjon er klar
   useEffect(() => {
     if (needRefresh) {
-      setShowReload(true);
+      console.log('New version available, updating automatically...');
+      updateServiceWorker(true);
     }
-  }, [needRefresh]);
+  }, [needRefresh, updateServiceWorker]);
 
-  const handleUpdate = () => {
-    // Bare oppdater - ingen fancy loading states
-    updateServiceWorker(true);
-  };
-
-  if (!showReload) return null;
-
-  return (
-    <div className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 flex gap-3 items-center">
-      <div>
-        <p className="font-semibold">Ny versjon tilgjengelig!</p>
-        <p className="text-sm opacity-90">Klikk for å oppdatere</p>
-      </div>
-      <button
-        onClick={handleUpdate}
-        className="bg-white text-blue-600 px-4 py-2 rounded font-semibold hover:bg-blue-50 transition-colors"
-      >
-        Oppdater
-      </button>
-    </div>
-  );
+  // Ingen UI - alt skjer automatisk i bakgrunnen
+  return null;
 }
 
 export default PwaUpdater;
