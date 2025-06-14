@@ -11,9 +11,23 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertCircle, Clock, Scissors, Calendar, Users } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { 
+  AlertCircle, 
+  Clock, 
+  Scissors, 
+  Calendar, 
+  ChevronDown,
+  CheckCircle2,
+  Wrench,
+  Sparkles,
+  Timer,
+  FileText,
+  Save,
+  Zap
+} from 'lucide-react';
 import { Location, Mower, User } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
@@ -21,6 +35,7 @@ import * as timeEntryService from '@/services/timeEntryService';
 import * as userService from '@/services/userService';
 import * as notificationService from '@/services/notificationService';
 import { getISOWeekNumber, getISOWeekDates, formatDateToShortLocale } from '@/lib/utils';
+import { EmployeeSelector, LocationSelector } from '@/pages/employee/time-entry';
 
 const timeEntrySchema = z.object({
   locationId: z.string({
@@ -37,7 +52,7 @@ const timeEntrySchema = z.object({
 
 type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
 
-const EmployeeTimeEntry = () => {
+const TimeEntry = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -47,6 +62,10 @@ const EmployeeTimeEntry = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [edgeCuttingNeeded, setEdgeCuttingNeeded] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [isEmployeeSectionOpen, setIsEmployeeSectionOpen] = useState(false);
+  const [isEquipmentSectionOpen, setIsEquipmentSectionOpen] = useState(false);
+  const [isNotesSectionOpen, setIsNotesSectionOpen] = useState(false);
+  
   const currentWeek = getISOWeekNumber(new Date());
   const weekDates = getISOWeekDates(currentWeek);
 
@@ -71,40 +90,41 @@ const EmployeeTimeEntry = () => {
 
   const selectedLocationId = watch('locationId');
   const edgeCuttingDone = watch('edgeCuttingDone');
+  const selectedHours = watch('hours');
+
+  // Quick hour suggestions
+  const quickHours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Get locations with weekly status
         const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
         
-        // Filter out completed locations
-       const availableLocations = locationsWithStatus.filter(loc => {
-     if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
-      if (loc.status === 'fullfort') return false;
-            if (loc.status === 'ikke_utfort') {
-      if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
-    return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
-    } 
-  return true;
-  } )
-  .map(loc => ({
-    id: loc.id,
-    name: loc.name,
-    address: loc.address,
-    maintenanceFrequency: loc.maintenanceFrequency,
-    edgeCuttingFrequency: loc.edgeCuttingFrequency,
-    startWeek: loc.startWeek,
-    notes: loc.notes,
-    isArchived: loc.isArchived,
-    createdAt: loc.createdAt,
-    updatedAt: loc.updatedAt,
-    status: loc.status, // <-- keep this!
-    isDueForMaintenanceInSelectedWeek: loc.isDueForMaintenanceInSelectedWeek,
-    isDueForEdgeCuttingInSelectedWeek: loc.isDueForEdgeCuttingInSelectedWeek,
-  }));
+        const availableLocations = locationsWithStatus.filter(loc => {
+          if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
+          if (loc.status === 'fullfort') return false;
+          if (loc.status === 'ikke_utfort') {
+            if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
+            return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
+          } 
+          return true;
+        }).map(loc => ({
+          id: loc.id,
+          name: loc.name,
+          address: loc.address,
+          maintenanceFrequency: loc.maintenanceFrequency,
+          edgeCuttingFrequency: loc.edgeCuttingFrequency,
+          startWeek: loc.startWeek,
+          notes: loc.notes,
+          isArchived: loc.isArchived,
+          createdAt: loc.createdAt,
+          updatedAt: loc.updatedAt,
+          status: loc.status,
+          isDueForMaintenanceInSelectedWeek: loc.isDueForMaintenanceInSelectedWeek,
+          isDueForEdgeCuttingInSelectedWeek: loc.isDueForEdgeCuttingInSelectedWeek,
+        }));
 
         const [mowerData, employeeData] = await Promise.all([
           equipmentService.getAllMowers(),
@@ -149,7 +169,7 @@ const EmployeeTimeEntry = () => {
     }
   }, [selectedLocationId, locations, currentWeek]);
 
-  const handleEmployeeSelect = (employeeId: string) => {
+  const handleEmployeeToggle = (employeeId: string) => {
     setSelectedEmployees(prev => {
       const isSelected = prev.includes(employeeId);
       if (isSelected) {
@@ -158,6 +178,14 @@ const EmployeeTimeEntry = () => {
         return [...prev, employeeId];
       }
     });
+  };
+
+  const handleQuickHourSelect = (hours: number) => {
+    setValue('hours', hours);
+    // Add haptic feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(30);
+    }
   };
 
   const onSubmit = async (data: TimeEntryFormValues) => {
@@ -171,7 +199,11 @@ const EmployeeTimeEntry = () => {
     }
 
     try {
-      // Add the time entry and get the ID - Convert Date to Timestamp
+      // Add haptic feedback for submission
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]);
+      }
+
       const timeEntryId = await timeEntryService.addTimeEntry({
         ...data,
         employeeId: currentUser.uid,
@@ -180,7 +212,6 @@ const EmployeeTimeEntry = () => {
         taggedEmployeeIds: selectedEmployees,
       });
       
-      // Create notifications for tagged employees
       if (selectedEmployees.length > 0 && timeEntryId) {
         const location = locations.find(loc => loc.id === data.locationId);
         
@@ -200,14 +231,17 @@ const EmployeeTimeEntry = () => {
       }
       
       toast({
-        title: 'Timeregistrering lagret',
-        description: 'Timeregistreringen ble lagret for ' + selectedLocation?.name,
+        title: '🎉 Timer registrert!',
+        description: `${selectedHours} timer registrert for ${selectedLocation?.name}`,
       });
       
       reset();
       setSelectedEmployees([]);
       setLocations((prev) => prev.filter(loc => loc.id !== data.locationId));
-      setSelectedLocation(null); // Optionally clear the selected location
+      setSelectedLocation(null);
+      setIsEmployeeSectionOpen(false);
+      setIsEquipmentSectionOpen(false);
+      setIsNotesSectionOpen(false);
     } catch (error) {
       console.error('Error submitting time entry:', error);
       toast({
@@ -218,166 +252,287 @@ const EmployeeTimeEntry = () => {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Timeregistrering</h1>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>Uke {currentWeek} ({formatDateToShortLocale(weekDates.start)} - {formatDateToShortLocale(weekDates.end)})</span>
+  if (loading) {
+    return (
+      <div className="space-y-4 p-6 animate-pulse">
+        <div className="h-12 bg-gradient-to-r from-blue-200 to-purple-200 rounded-xl" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl" />
+          ))}
         </div>
       </div>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Registrer utført vedlikehold</CardTitle>
-          <CardDescription>
-            Registrer timer for et sted og velg eventuelt brukt gressklipper
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="locationId">Velg sted *</Label>
-                <Select
-                  onValueChange={(value) => setValue('locationId', value)}
-                  defaultValue={selectedLocationId}
-                >
-                  <SelectTrigger id="locationId" className="w-full">
-                    <SelectValue placeholder="Velg sted" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.locationId && (
-                  <p className="text-sm text-destructive mt-1">{errors.locationId.message}</p>
-                )}
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="space-y-6 p-4 pb-24 md:pb-8 max-w-2xl mx-auto">
+        {/* Enhanced Header */}
+        <div className="text-center space-y-4 py-6">
+          <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
+            <Timer className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Registrer timer
+          </h1>
+          <div className="flex items-center justify-center space-x-3 text-sm text-muted-foreground bg-card/60 rounded-full px-4 py-2 backdrop-blur-sm border">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span className="font-medium">Uke {currentWeek}</span>
+            <span className="text-muted-foreground/50">•</span>
+            <span>({formatDateToShortLocale(weekDates.start)} - {formatDateToShortLocale(weekDates.end)})</span>
+          </div>
+        </div>
+
+        {locations.length === 0 && (
+          <Card className="card-hover border-0 bg-primary/5">
+            <CardContent className="flex flex-col items-center text-center p-8 space-y-4">
+              <div className="p-4 rounded-full bg-primary/10">
+                <CheckCircle2 className="h-12 w-12 text-primary" />
               </div>
+              <h3 className="text-xl font-semibold text-primary">Alle oppgaver fullført! 🎉</h3>
+              <p className="text-muted-foreground max-w-sm">
+                Flott jobba! Du har ingen steder som trenger vedlikehold denne uken.
+              </p>
+              <div className="flex space-x-2">
+                <Badge className="bg-primary/10 text-primary border-primary/20">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Perfekt score
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-              {selectedLocation && (
-                <div className="rounded-md bg-muted p-4">
-                  <h3 className="font-medium mb-1">{selectedLocation.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-2">{selectedLocation.address}</p>
+        <div className="space-y-6">
+          {/* Location Selection */}
+          <LocationSelector
+            locations={locations}
+            selectedLocationId={selectedLocationId}
+            selectedLocation={selectedLocation}
+            onLocationChange={(value) => setValue('locationId', value)}
+            edgeCuttingNeeded={edgeCuttingNeeded}
+            error={errors.locationId?.message}
+            currentWeek={currentWeek}
+          />
+
+          {/* Enhanced Time Entry */}
+          {selectedLocation && (
+            <Card className="card-hover">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-lg font-semibold">
+                  <div className="p-2 rounded-full bg-primary/10 mr-3">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  Tidsbruk
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Label htmlFor="hours" className="text-base font-medium">Timer brukt *</Label>
                   
-                  {selectedLocation.notes && (
-                    <div className="mt-2">
-                      <p className="text-sm font-medium">Notater:</p>
-                      <p className="text-sm">{selectedLocation.notes}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="hours" className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4" />
-                    Tidsbruk (timer) *
-                  </Label>
+                  {/* Quick hour buttons */}
+                  <div className="grid grid-cols-5 gap-2 mb-4">
+                    {quickHours.map((hour) => (
+                      <Button
+                        key={hour}
+                        type="button"
+                        variant={selectedHours === hour ? "default" : "outline"}
+                        size="sm"
+                        className={`h-10 text-sm font-medium transition-all duration-200 button-effect ${
+                          selectedHours === hour 
+                            ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                            : 'hover:bg-primary/10 hover:border-primary/50'
+                        }`}
+                        onClick={() => handleQuickHourSelect(hour)}
+                      >
+                        {hour}h
+                      </Button>
+                    ))}
+                  </div>
+                  
                   <Input
                     id="hours"
                     type="number"
-                    step="0.5"
-                    min="0.5"
-                    placeholder="0.0"
+                    step="0.25"
+                    min="0.25"
+                    placeholder="Eller skriv inn timer..."
+                    className="h-14 text-lg border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                     {...register('hours')}
                   />
                   {errors.hours && (
-                    <p className="text-sm text-destructive mt-1">{errors.hours.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="mowerId">Gressklipper brukt</Label>
-                  <Select
-                    onValueChange={(value) => setValue('mowerId', value === 'none' ? null : value)}
-                  >
-                    <SelectTrigger id="mowerId">
-                      <SelectValue placeholder="Velg gressklipper" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Ingen gressklipper brukt</SelectItem>
-                      {mowers.map((mower) => (
-                        <SelectItem key={mower.id} value={mower.id}>
-                          {mower.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edgeCuttingDone"
-                  checked={edgeCuttingDone}
-                  onCheckedChange={(checked) => setValue('edgeCuttingDone', checked)}
-                />
-                <div>
-                  <Label htmlFor="edgeCuttingDone" className="flex items-center">
-                    <Scissors className="mr-2 h-4 w-4" />
-                    Kantklipping utført
-                  </Label>
-                  {edgeCuttingNeeded && !edgeCuttingDone && (
-                    <p className="text-xs text-amber-600 flex items-center mt-0.5">
-                      <AlertCircle className="mr-1 h-3 w-3" />
-                      Kantklipping er anbefalt for dette stedet
+                    <p className="text-sm text-destructive flex items-center animate-in slide-in-from-left-2 duration-300">
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      {errors.hours.message}
                     </p>
                   )}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )}
 
-              <div>
-                <Label className="flex items-center mb-2">
-                  <Users className="mr-2 h-4 w-4" />
-                  Andre medarbeidere på jobb
-                </Label>
-                <ScrollArea className="h-32 rounded-md border">
-                  <div className="p-2 space-y-1">
-                    {employees.map((employee) => (
-                      <div
-                        key={employee.id}
-                        className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${
-                          selectedEmployees.includes(employee.id)
-                            ? 'bg-primary/10 text-primary'
-                            : 'hover:bg-muted'
-                        }`}
-                        onClick={() => handleEmployeeSelect(employee.id)}
-                      >
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                          {employee.name.charAt(0)}
-                        </div>
-                        <span className="text-sm font-medium">{employee.name}</span>
+          {/* Enhanced Edge Cutting */}
+          {selectedLocation && (
+            <Card className="card-hover">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50 border border-amber-200">
+                  <div className="flex-1">
+                    <Label htmlFor="edgeCuttingDone" className="text-base font-semibold flex items-center">
+                      <div className="p-2 rounded-full bg-amber-100 mr-3">
+                        <Scissors className="h-5 w-5 text-amber-600" />
                       </div>
-                    ))}
+                      Kantklipping utført
+                    </Label>
+                    {edgeCuttingNeeded && !edgeCuttingDone && (
+                      <p className="text-sm text-amber-700 flex items-center mt-2 ml-11 animate-pulse">
+                        <Zap className="mr-1 h-3 w-3" />
+                        Anbefales for dette stedet
+                      </p>
+                    )}
+                    {edgeCuttingDone && (
+                      <p className="text-sm text-primary flex items-center mt-2 ml-11">
+                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                        Kantklipping registrert
+                      </p>
+                    )}
                   </div>
-                </ScrollArea>
-              </div>
+                  <Switch
+                    id="edgeCuttingDone"
+                    checked={edgeCuttingDone}
+                    onCheckedChange={(checked) => {
+                      setValue('edgeCuttingDone', checked);
+                      if ('vibrate' in navigator) {
+                        navigator.vibrate(50);
+                      }
+                    }}
+                    className="scale-125 data-[state=checked]:bg-primary"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              <div>
-                <Label htmlFor="notes">Notater</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Skriv eventuelle merknader her"
-                  {...register('notes')}
-                />
-              </div>
+          {/* Enhanced Equipment Selection */}
+          {selectedLocation && (
+            <Collapsible open={isEquipmentSectionOpen} onOpenChange={setIsEquipmentSectionOpen}>
+              <Card className="card-hover">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 active:bg-muted transition-all duration-200">
+                    <CardTitle className="flex items-center justify-between text-lg font-semibold">
+                      <div className="flex items-center">
+                        <div className="p-2 rounded-full bg-muted mr-3">
+                          <Wrench className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span>Utstyr brukt</span>
+                          <span className="text-xs text-muted-foreground font-normal">Hvilken gressklipper ble brukt?</span>
+                        </div>
+                        <Badge variant="outline" className="ml-3">Valgfritt</Badge>
+                      </div>
+                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-muted-foreground ${isEquipmentSectionOpen ? 'rotate-180' : ''}`} />
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <Select
+                      onValueChange={(value) => setValue('mowerId', value === 'none' ? null : value)}
+                    >
+                      <SelectTrigger className="h-12 border-2 hover:border-primary/50 transition-colors">
+                        <SelectValue placeholder="🚜 Velg gressklipper" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="py-3">
+                          <span className="text-muted-foreground">Ingen gressklipper brukt</span>
+                        </SelectItem>
+                        {mowers.map((mower) => (
+                          <SelectItem key={mower.id} value={mower.id} className="py-3">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{mower.name}</span>
+                              <span className="text-sm text-muted-foreground">{mower.model}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
+
+          {/* Team Members */}
+          {selectedLocation && (
+            <EmployeeSelector
+              employees={employees}
+              selectedEmployees={selectedEmployees}
+              onEmployeeToggle={handleEmployeeToggle}
+              isOpen={isEmployeeSectionOpen}
+              onOpenChange={setIsEmployeeSectionOpen}
+            />
+          )}
+
+          {/* Enhanced Notes */}
+          {selectedLocation && (
+            <Collapsible open={isNotesSectionOpen} onOpenChange={setIsNotesSectionOpen}>
+              <Card className="card-hover">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/30 active:bg-muted transition-all duration-200">
+                    <CardTitle className="flex items-center justify-between text-lg font-semibold">
+                      <div className="flex items-center">
+                        <div className="p-2 rounded-full bg-primary/10 mr-3">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span>Notater</span>
+                          <span className="text-xs text-muted-foreground font-normal">Legg til merknader om jobben</span>
+                        </div>
+                        <Badge variant="outline" className="ml-3">Valgfritt</Badge>
+                      </div>
+                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-muted-foreground ${isNotesSectionOpen ? 'rotate-180' : ''}`} />
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <Textarea
+                      placeholder="💭 Skriv eventuelle merknader om jobben her..."
+                      className="min-h-[100px] resize-none border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                      {...register('notes')}
+                    />
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
+
+          {/* Enhanced Submit Button */}
+          {selectedLocation && (
+            <div className="sticky bottom-4 z-10">
+              <Button 
+                onClick={handleSubmit(onSubmit)}
+                className="w-full h-16 text-lg font-semibold bg-primary hover:bg-primary/90 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] button-effect" 
+                disabled={isSubmitting}
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
+                    Lagrer timer...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-3 h-5 w-5" />
+                    Registrer og marker som fullført 🎯
+                  </>
+                )}
+              </Button>
             </div>
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Lagrer...' : 'Registrer og marker som fullført'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
-export default EmployeeTimeEntry;
+export default TimeEntry;
