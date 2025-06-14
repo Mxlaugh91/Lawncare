@@ -94,10 +94,7 @@ export const LocationListTable = ({ filteredLocations, loading }: LocationListTa
               <TableCell className="hidden lg:table-cell">
                 {location.timeEntries && location.timeEntries.length > 0 
                   ? new Intl.DateTimeFormat('no-NO', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit'
+                      weekday: 'long'
                     }).format(location.timeEntries[0].date.toDate())
                   : 'Ikke registrert'
                 }
