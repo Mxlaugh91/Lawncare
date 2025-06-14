@@ -85,20 +85,88 @@ VitePWA({
 src/
 ├── components/     # UI Components
 │   ├── layouts/   # Layout components
+│   │   ├── AdminLayout.tsx
+│   │   └── EmployeeLayout.tsx
 │   ├── ui/        # shadcn/ui components
+│   ├── admin/     # Admin-specific components
+│   │   ├── equipment/
+│   │   │   ├── AddIntervalDialog.tsx
+│   │   │   ├── AddMowerDialog.tsx
+│   │   │   ├── EquipmentStatsCards.tsx
+│   │   │   ├── MowerCard.tsx
+│   │   │   └── MowerList.tsx
+│   │   └── operations/
+│   │       ├── LocationListTable.tsx
+│   │       ├── LocationMobileCards.tsx
+│   │       ├── OperationsFilters.tsx
+│   │       ├── OperationsHeader.tsx
+│   │       └── OperationsStatsCards.tsx
 │   ├── notifications/ # Notification components
+│   │   ├── NotificationBell.tsx
+│   │   └── TimeEntryDialog.tsx
 │   └── PwaUpdater.tsx # PWA update management
 ├── contexts/      # React Context providers
+│   └── AuthContext.tsx
 ├── hooks/         # Custom React hooks
+│   ├── use-toast.ts
+│   └── useFirebaseMessaging.ts
 ├── lib/           # Utility functions
+│   └── utils.ts
 ├── pages/         # Page components
 │   ├── admin/     # Admin pages
+│   │   ├── Archive.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── Employees.tsx
+│   │   ├── Equipment.tsx
+│   │   ├── Locations.tsx
+│   │   ├── Operations.tsx
+│   │   └── Settings.tsx
 │   ├── employee/  # Employee pages
-│   └── auth/      # Authentication pages
+│   │   ├── time-entry/  # Time entry components (refactored)
+│   │   │   ├── EmployeeSelector.tsx
+│   │   │   ├── LocationSelector.tsx
+│   │   │   ├── TimeEntryHeader.tsx
+│   │   │   ├── TimeEntryHoursInput.tsx
+│   │   │   ├── TimeEntryEdgeCutting.tsx
+│   │   │   ├── TimeEntryEquipment.tsx
+│   │   │   ├── TimeEntryNotes.tsx
+│   │   │   ├── TimeEntrySubmitButton.tsx
+│   │   │   ├── TimeEntryCompletedState.tsx
+│   │   │   └── index.ts
+│   │   ├── Dashboard.tsx
+│   │   ├── History.tsx
+│   │   └── TimeEntry.tsx
+│   ├── auth/      # Authentication pages
+│   │   └── LoginPage.tsx
+│   └── NotFoundPage.tsx
 ├── routes/        # Routing logic
+│   ├── AdminRoute.tsx
+│   ├── AppRoutes.tsx
+│   └── ProtectedRoute.tsx
 ├── services/      # Firebase service layer
+│   ├── adminService.ts
+│   ├── authService.ts
+│   ├── equipmentService.ts
+│   ├── firebase.ts
+│   ├── locationService.ts
+│   ├── notificationService.ts
+│   ├── seasonSettingsService.ts
+│   ├── timeEntryService.ts
+│   └── userService.ts
 ├── store/         # Zustand state management
-└── types/         # TypeScript type definitions
+│   ├── equipmentStore.ts
+│   ├── index.ts
+│   ├── locationStore.ts
+│   ├── notificationStore.ts
+│   ├── settingsStore.ts
+│   ├── timeEntryStore.ts
+│   └── userStore.ts
+├── types/         # TypeScript type definitions
+│   └── index.ts
+├── App.tsx        # Main App component
+├── main.tsx       # Application entry point
+├── index.css      # Global styles
+└── sw.js          # Service Worker
 ```
 
 ## State Management (Zustand Stores)
@@ -310,6 +378,27 @@ Features:
 - Read status tracking
 - Bulk operations
 
+## Component Architecture
+
+### Time Entry Components (Refactored)
+The time entry functionality has been refactored into smaller, focused components:
+
+- **TimeEntryHeader.tsx** - Page title, week number, and date display
+- **TimeEntryHoursInput.tsx** - Hours input with quick-select buttons
+- **TimeEntryEdgeCutting.tsx** - Edge cutting toggle and status
+- **TimeEntryEquipment.tsx** - Collapsible equipment selection
+- **TimeEntryNotes.tsx** - Collapsible notes section
+- **TimeEntrySubmitButton.tsx** - Submit button with loading states
+- **TimeEntryCompletedState.tsx** - "All tasks completed" display
+- **EmployeeSelector.tsx** - Team member selection (enhanced with React.memo)
+- **LocationSelector.tsx** - Location selection (enhanced with React.memo)
+
+### Performance Optimizations
+- **React.memo** - Prevents unnecessary re-renders of components
+- **useCallback** - Memoizes event handlers to prevent child re-renders
+- **Component splitting** - Smaller components load faster and are easier to optimize
+- **Lazy loading** - Components can be loaded on-demand
+
 ## Error Handling
 
 ### Transaction Support
@@ -407,8 +496,18 @@ cn(...inputs: ClassValue[]): string  // Tailwind class merging
 ### UI Components
 - Layouts: `src/components/layouts/`
 - UI Components: `src/components/ui/`
+- Admin Components: `src/components/admin/`
 - Pages: `src/pages/`
+- Time Entry Components: `src/pages/employee/time-entry/`
 
 ### Business Logic
 - Services: `src/services/`
 - Hooks: `src/hooks/`
+
+### Recent Refactoring
+The TimeEntry page has been refactored from a single large component (~500+ lines) into multiple smaller, focused components (~50-100 lines each). This improves:
+- **Maintainability** - Easier to find and modify specific functionality
+- **Performance** - Better memoization and reduced re-renders
+- **Reusability** - Components can be reused in other parts of the app
+- **Testing** - Smaller components are easier to test in isolation
+- **Development** - Faster hot module replacement and debugging
