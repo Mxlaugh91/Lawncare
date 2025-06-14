@@ -15,7 +15,7 @@ function PwaUpdater() {
       if (registration) {
         setInterval(() => {
           registration.update();
-        }, 30 * 60 * 1000);
+        }, 30 * 1000);
       }
     },
     onOfflineReady() {
