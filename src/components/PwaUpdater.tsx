@@ -1,4 +1,4 @@
-// src/components/PwaUpdater.tsx - Automatisk PWA oppdatering uten brukerinteraksjon
+// src/components/PwaUpdater.tsx - Automatisk PWA oppdatering med reload
 
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useEffect } from 'react';
@@ -28,6 +28,11 @@ function PwaUpdater() {
     if (needRefresh) {
       console.log('New version available, updating automatically...');
       updateServiceWorker(true);
+      
+      // VIKTIG: Reload siden for å sikre at ny kode lastes
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   }, [needRefresh, updateServiceWorker]);
 
