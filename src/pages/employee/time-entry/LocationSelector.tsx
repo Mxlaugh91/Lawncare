@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +15,7 @@ interface LocationSelectorProps {
   currentWeek: number;
 }
 
-export const LocationSelector = ({ 
+export const LocationSelector = React.memo(({ 
   locations, 
   selectedLocationId, 
   selectedLocation,
@@ -69,4 +70,6 @@ export const LocationSelector = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+LocationSelector.displayName = 'LocationSelector';

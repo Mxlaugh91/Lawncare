@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -14,24 +14,24 @@ interface EmployeeSelectorProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export const EmployeeSelector = ({ 
+export const EmployeeSelector = React.memo(({ 
   employees, 
   selectedEmployees, 
   onEmployeeToggle,
   isOpen = false,
   onOpenChange 
 }: EmployeeSelectorProps) => {
-  const [internalOpen, setInternalOpen] = useState(isOpen);
+  const [internalOpen, setInternalOpen] = React.useState(isOpen);
   const open = onOpenChange ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
 
-  const handleEmployeeToggle = (employeeId: string) => {
+  const handleEmployeeToggle = React.useCallback((employeeId: string) => {
     // Add haptic feedback simulation for PWA
     if ('vibrate' in navigator) {
       navigator.vibrate(50);
     }
     onEmployeeToggle(employeeId);
-  };
+  }, [onEmployeeToggle]);
 
   if (employees.length === 0) {
     return null;
@@ -156,4 +156,6 @@ export const EmployeeSelector = ({
       </Card>
     </Collapsible>
   );
-};
+});
+
+EmployeeSelector.displayName = 'EmployeeSelector';

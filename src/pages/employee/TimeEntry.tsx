@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -169,7 +169,8 @@ const TimeEntry = () => {
     }
   }, [selectedLocationId, locations, currentWeek]);
 
-  const handleEmployeeToggle = (employeeId: string) => {
+  // Memoize the employee toggle handler to prevent unnecessary re-renders
+  const handleEmployeeToggle = useCallback((employeeId: string) => {
     setSelectedEmployees(prev => {
       const isSelected = prev.includes(employeeId);
       if (isSelected) {
@@ -178,15 +179,20 @@ const TimeEntry = () => {
         return [...prev, employeeId];
       }
     });
-  };
+  }, []);
 
-  const handleQuickHourSelect = (hours: number) => {
+  // Memoize the location change handler
+  const handleLocationChange = useCallback((value: string) => {
+    setValue('locationId', value);
+  }, [setValue]);
+
+  const handleQuickHourSelect = useCallback((hours: number) => {
     setValue('hours', hours);
     // Add haptic feedback
     if ('vibrate' in navigator) {
       navigator.vibrate(30);
     }
-  };
+  }, [setValue]);
 
   const onSubmit = async (data: TimeEntryFormValues) => {
     if (!currentUser) {
@@ -310,7 +316,7 @@ const TimeEntry = () => {
             locations={locations}
             selectedLocationId={selectedLocationId}
             selectedLocation={selectedLocation}
-            onLocationChange={(value) => setValue('locationId', value)}
+            onLocationChange={handleLocationChange}
             edgeCuttingNeeded={edgeCuttingNeeded}
             error={errors.locationId?.message}
             currentWeek={currentWeek}
