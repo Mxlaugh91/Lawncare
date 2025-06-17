@@ -13,22 +13,52 @@ import {
   AlertCircle,
   ChevronRight
 } from 'lucide-react';
-import { Location, Mower, ServiceInterval } from '@/types';
+import { LocationWithStatus, Mower, ServiceInterval } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
 import { useToast } from '@/hooks/use-toast';
+import { getISOWeekNumber } from '@/lib/utils';
+
+const getStatusBadge = (location: LocationWithStatus) => {
+  if (!location.isDueForMaintenanceInSelectedWeek && !location.isDueForEdgeCuttingInSelectedWeek) {
+    return null;
+  }
+
+  switch (location.status) {
+    case 'fullfort':
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 ml-2">
+          Fullført
+        </Badge>
+      );
+    case 'ikke_utfort':
+      return (
+        <Badge variant="destructive" className="ml-2">
+          Ikke utført
+        </Badge>
+      );
+    default:
+      return (
+        <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 ml-2">
+          Planlagt
+        </Badge>
+      );
+  }
+};
 
 const EmployeeDashboard = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [pendingLocations, setPendingLocations] = useState<Location[]>([]);
+  const [locationsForCurrentWeek, setLocationsForCurrentWeek] = useState<LocationWithStatus[]>([]);
   const [mowersNeedingService, setMowersNeedingService] = useState<Array<{
     mower: Mower;
     intervals: ServiceInterval[];
   }>>([]);
+
+  const currentWeek = getISOWeekNumber(new Date());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,9 +67,28 @@ const EmployeeDashboard = () => {
       try {
         setLoading(true);
         
-        // Get locations due for service
-        const dueLocations = await locationService.getLocationsDueForService();
-        setPendingLocations(dueLocations);
+        // Get locations with weekly status for current week
+        const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
+        
+        // Filter locations that are relevant for employees
+        const relevantLocations = locationsWithStatus.filter(loc => {
+          // Show locations that are due for maintenance or edge cutting this week
+          if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
+          
+          // If completed, show it
+          if (loc.status === 'fullfort') return true;
+          
+          // If not done and has tagged employees, only show if current user is tagged
+          if (loc.status === 'ikke_utfort') {
+            if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
+            return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
+          } 
+          
+          // Show planned tasks
+          return true;
+        });
+
+        setLocationsForCurrentWeek(relevantLocations);
         
         // Get mowers needing service
         const mowersNeedingService = await equipmentService.getMowersNeedingService();
@@ -63,17 +112,7 @@ const EmployeeDashboard = () => {
     };
 
     fetchData();
-  }, [currentUser, toast]);
-
-  const getCurrentWeek = () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 1);
-    const diff = now.getTime() - start.getTime();
-    const oneWeek = 604800000;
-    return Math.ceil(diff / oneWeek);
-  };
-
-  const currentWeek = getCurrentWeek();
+  }, [currentUser, toast, currentWeek]);
 
   const handleServiceReset = async (mowerId: string, intervalId: string) => {
     if (!currentUser) return;
@@ -134,10 +173,10 @@ const EmployeeDashboard = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <MapPin className="mr-2 h-5 w-5 text-primary" />
-              Steder som gjenstår
+              Ukens oppgaver
             </CardTitle>
             <CardDescription>
-              Uke {currentWeek} - Steder som trenger Klipping
+              Uke {currentWeek} - Alle oppgaver for denne uken
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -149,31 +188,43 @@ const EmployeeDashboard = () => {
                   </div>
                 ))}
               </div>
-            ) : pendingLocations.length > 0 ? (
+            ) : locationsForCurrentWeek.length > 0 ? (
               <ScrollArea className="h-[300px] pr-4">
                 <div className="space-y-3">
-                  {pendingLocations.map((location) => (
-                    <div key={location.id} className="rounded-md border p-4 transition-all hover:bg-muted">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{location.name}</h4>
-                          <p className="text-sm text-muted-foreground">{location.address}</p>
-                        </div>
-                        <div className="flex items-center">
-                          {(currentWeek - (location.lastEdgeCuttingWeek || 0)) >= location.edgeCuttingFrequency && (
-                            <Badge className="mr-2\" variant="outline">Kantklipp</Badge>
-                          )}
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  {locationsForCurrentWeek.map((location) => {
+                    const statusBadge = getStatusBadge(location);
+                    
+                    return (
+                      <div key={location.id} className="rounded-md border p-4 transition-all hover:bg-muted">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center mb-1">
+                              <h4 className="font-medium truncate">{location.name}</h4>
+                              {statusBadge}
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">{location.address}</p>
+                            <div className="flex gap-2 mt-2">
+                              {location.isDueForEdgeCuttingInSelectedWeek && (
+                                <Badge variant="outline" className="text-xs">Kantklipp</Badge>
+                              )}
+                              {location.isDueForMaintenanceInSelectedWeek && (
+                                <Badge variant="outline" className="text-xs">Gressklipp</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center ml-2">
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             ) : (
               <div className="flex flex-col items-center justify-center h-[200px] text-center p-4">
                 <CheckCircle2 className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-lg font-medium">Alle oppgaver er fullført!</h3>
+                <h3 className="text-lg font-medium">Ingen oppgaver denne uken!</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Det er ingen steder som trenger klipping for øyeblikket.
                 </p>
