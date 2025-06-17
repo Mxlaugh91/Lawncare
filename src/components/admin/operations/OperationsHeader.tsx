@@ -1,6 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -19,41 +25,55 @@ interface OperationsHeaderProps {
 
 export const OperationsHeader = ({ onArchiveAll }: OperationsHeaderProps) => {
   return (
-    <div className="flex items-center justify-between">
-      <h1 className="text-2xl font-bold tracking-tight">Drift</h1>
-      <div className="flex space-x-2">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive">
-              <Archive className="mr-2 h-4 w-4" />
-              Arkiver alle steder
+    <div className="flex space-x-2">
+      <TooltipProvider>
+        <Tooltip>
+          <AlertDialog>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Archive className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Arkiver alle steder</p>
+            </TooltipContent>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Dette vil arkivere alle aktive steder. Denne handlingen kan ikke angres.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onArchiveAll}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Arkiver alle
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="sm" asChild>
+              <Link to="/admin/steder/nytt">
+                <MapPin className="h-4 w-4" />
+              </Link>
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Dette vil arkivere alle aktive steder. Denne handlingen kan ikke angres.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Avbryt</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={onArchiveAll}
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                Arkiver alle
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <Button asChild>
-          <Link to="/admin/steder/nytt">
-            <MapPin className="mr-2 h-4 w-4" />
-            Legg til nytt sted
-          </Link>
-        </Button>
-      </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Legg til nytt sted</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 };
