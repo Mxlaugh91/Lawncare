@@ -49,7 +49,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   const menuItems = [
     { to: '/admin', label: 'Oversikt', icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
-    { to: '/admin/drift', label: 'Drift', icon: <FileSpreadsheet className="mr-2 h-4 w-4" /> },
+    { to: '/admin/drift', label: 'Klippeliste', icon: <FileSpreadsheet className="mr-2 h-4 w-4" /> },
     { to: '/admin/ansatte', label: 'Ansatte', icon: <Users className="mr-2 h-4 w-4" /> },
     { to: '/admin/arkiv', label: 'Arkiv', icon: <Archive className="mr-2 h-4 w-4" /> },
     { to: '/admin/vedlikehold', label: 'Vedlikehold', icon: <Tool className="mr-2 h-4 w-4" /> },
