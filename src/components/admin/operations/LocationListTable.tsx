@@ -61,7 +61,7 @@ export const LocationListTable = ({ filteredLocations, loading }: LocationListTa
       <TableHeader>
         <TableRow>
           <TableHead className="w-[250px]">Sted</TableHead>
-          <TableHead className="hidden md:table-cell">Hovedvedlikehold</TableHead>
+          <TableHead className="hidden md:table-cell">Gressklipping</TableHead>
           <TableHead className="hidden md:table-cell">Kantklipping</TableHead>
           <TableHead className="hidden lg:table-cell">Sist utført</TableHead>
           <TableHead className="hidden lg:table-cell">Tidsbruk</TableHead>

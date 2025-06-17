@@ -92,7 +92,10 @@ const Operations = () => {
 
   return (
     <div className="space-y-6">
-      <OperationsHeader onArchiveAll={handleArchiveAll} />
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Klippeliste</h1>
+        <OperationsHeader onArchiveAll={handleArchiveAll} />
+      </div>
 
       <Card>
         <CardContent className="p-6">

@@ -242,7 +242,7 @@ const AdminDashboard = () => {
               <Button className="w-full justify-start" variant="outline" asChild>
                 <Link to="/admin/drift">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Drift
+                  Klippeliste
                 </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
