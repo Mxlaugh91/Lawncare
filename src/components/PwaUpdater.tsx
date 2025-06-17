@@ -1,4 +1,4 @@
-// src/components/PwaUpdater.tsx - Automatisk PWA oppdatering med reload
+// src/components/PwaUpdater.tsx - PWA oppdatering med cache-busting reload
 
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useEffect } from 'react';
@@ -29,9 +29,16 @@ function PwaUpdater() {
       console.log('New version available, updating automatically...');
       updateServiceWorker(true);
       
-      // VIKTIG: Reload siden for å sikre at ny kode lastes
+      // CACHE-BUSTING: Legg til unik parameter for å tvinge reload av alle ressurser
       setTimeout(() => {
-        window.location.reload();
+        const timestamp = Date.now();
+        const currentUrl = new URL(window.location.href);
+        
+        // Legg til cache-busting parameter
+        currentUrl.searchParams.set('_cb', timestamp.toString());
+        
+        // Erstatt current URL med den nye cache-busting URL-en
+        window.location.replace(currentUrl.href);
       }, 100);
     }
   }, [needRefresh, updateServiceWorker]);
