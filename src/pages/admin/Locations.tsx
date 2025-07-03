@@ -192,7 +192,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with back button */}
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div className="flex items-center space-x-4">
@@ -262,7 +262,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="animate-pulse">
                     <div className="h-4 bg-gray-200 rounded w-1/4 mb-2" />
@@ -271,8 +271,8 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                 ))}
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-1">Adresse</h4>
                     <p className="text-base">{location.address}</p>
@@ -283,7 +283,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-1">Frekvens klipping</h4>
                     <p className="text-base">Hver {location.maintenanceFrequency}. uke</p>
@@ -303,7 +303,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                   </div>
                 )}
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-1">Sist klippet</h4>
                     <p className="text-base">
@@ -325,7 +325,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
 
       {/* Historical Data Section - Only show for existing locations */}
       {!isNew && location && (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {/* Time Usage Summary */}
           <Card>
             <CardHeader>
@@ -342,15 +342,15 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                   <div className="h-4 bg-gray-200 rounded w-2/3" />
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
                       <div className="text-2xl font-bold text-blue-700">
                         {getTotalHours()}
                       </div>
                       <div className="text-sm text-blue-600">Timer totalt</div>
                     </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
                       <div className="text-2xl font-bold text-green-700">
                         {locationTimeEntries.length}
                       </div>
@@ -358,8 +358,8 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-amber-50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 bg-amber-50 rounded-lg">
                       <div className="text-2xl font-bold text-amber-700">
                         {getEdgeCuttingCount()}
                       </div>
@@ -368,7 +368,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                         Kantklipp utført
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <div className="text-center p-3 bg-purple-50 rounded-lg">
                       <div className="text-2xl font-bold text-purple-700">
                         {getUniqueEmployees().length}
                       </div>
@@ -405,8 +405,8 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 rounded-lg">
                   <div className="text-center">
                     <div className="text-lg font-semibold text-gray-600 mb-2">
                       Funksjon ikke implementert
@@ -450,9 +450,9 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
               </div>
             ) : getNotesFromTimeEntries().length > 0 ? (
               <ScrollArea className="h-[300px] pr-4">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {getNotesFromTimeEntries().map((noteEntry, index) => (
-                    <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                    <div key={index} className="border rounded-lg p-3 bg-gray-50">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-gray-500" />
@@ -467,7 +467,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                           {noteEntry.employeeName}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-700 bg-white p-3 rounded border">
+                      <p className="text-sm text-gray-700 bg-white p-2 rounded border">
                         {noteEntry.notes}
                       </p>
                     </div>
