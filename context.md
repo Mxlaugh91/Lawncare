@@ -399,6 +399,34 @@ The time entry functionality has been refactored into smaller, focused component
 - **Component splitting** - Smaller components load faster and are easier to optimize
 - **Lazy loading** - Components can be loaded on-demand
 
+## Real-time Updates Architecture
+
+### Zustand Store Integration
+The application uses Zustand stores with real-time Firebase listeners for immediate data synchronization:
+
+#### AdminRoute.tsx
+- Initializes real-time location updates when admin user is authenticated
+- Sets up Firestore listeners through `locationStore.initRealtimeUpdates()`
+- Automatically cleans up listeners on unmount or user change
+
+#### ProtectedRoute.tsx
+- Initializes real-time location updates for all authenticated users
+- Ensures employees also receive real-time location status updates
+
+#### Operations.tsx (Admin Panel)
+- **Real-time Reactivity**: Uses `storeLocations` from Zustand store as dependency
+- **Automatic Updates**: Re-fetches weekly status data when any location changes
+- **Tagged Employee Integration**: Immediately reflects time entries from tagged employees
+
+### Data Flow for Tagged Employee Time Entries
+1. Employee A tags Employee B on a job
+2. Employee B receives notification and registers their hours
+3. Time entry is created and location's maintenance fields are updated
+4. Real-time listener in AdminRoute picks up the location change
+5. Zustand store updates `storeLocations` array
+6. Operations.tsx detects the change and re-fetches weekly status
+7. Admin panel immediately shows updated completion status
+
 ## Error Handling
 
 ### Transaction Support
@@ -504,10 +532,29 @@ cn(...inputs: ClassValue[]): string  // Tailwind class merging
 - Services: `src/services/`
 - Hooks: `src/hooks/`
 
-### Recent Refactoring
+## Recent Updates and Fixes
+
+### Real-time Data Synchronization
+- **Fixed Operations.tsx**: Added `storeLocations` dependency to ensure admin panel updates when tagged employees submit time entries
+- **Enhanced Zustand Integration**: Location store now provides real-time updates to all components
+- **Improved Data Flow**: Tagged employee time entries now immediately reflect in admin klippeliste
+
+### Component Refactoring
 The TimeEntry page has been refactored from a single large component (~500+ lines) into multiple smaller, focused components (~50-100 lines each). This improves:
 - **Maintainability** - Easier to find and modify specific functionality
 - **Performance** - Better memoization and reduced re-renders
 - **Reusability** - Components can be reused in other parts of the app
 - **Testing** - Smaller components are easier to test in isolation
 - **Development** - Faster hot module replacement and debugging
+
+### Firebase Security Rules
+- Comprehensive Firestore security rules implemented
+- Role-based access control for all collections
+- Proper validation for data types and required fields
+- Support for employee tagging and time entry workflows
+
+### PWA Features
+- Automatic service worker updates
+- Offline functionality with intelligent caching
+- Push notifications for job tagging
+- App-like experience on mobile devices
