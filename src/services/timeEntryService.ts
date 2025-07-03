@@ -115,10 +115,58 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     }
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const timeEntries = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as TimeEntry[];
+
+    // Collect all unique employee IDs from time entries and tagged employees
+    const allEmployeeIds = new Set<string>();
+    
+    timeEntries.forEach(entry => {
+      if (entry.employeeId) {
+        allEmployeeIds.add(entry.employeeId);
+      }
+      if (entry.taggedEmployeeIds && Array.isArray(entry.taggedEmployeeIds)) {
+        entry.taggedEmployeeIds.forEach(id => allEmployeeIds.add(id));
+      }
+    });
+
+    // Fetch all users in batches if we have employee IDs
+    let allUsers: any[] = [];
+    if (allEmployeeIds.size > 0) {
+      const employeeIdArray = Array.from(allEmployeeIds);
+      
+      // Batch fetch users (Firestore 'in' query limit is 10)
+      const chunkArray = <T>(array: T[], chunkSize: number): T[][] => {
+        const chunks: T[][] = [];
+        for (let i = 0; i < array.length; i += chunkSize) {
+          chunks.push(array.slice(i, i + chunkSize));
+        }
+        return chunks;
+      };
+
+      const employeeChunks = chunkArray(employeeIdArray, 10);
+      
+      for (const chunk of employeeChunks) {
+        const users = await userService.getUsersByIds(chunk);
+        allUsers = [...allUsers, ...users];
+      }
+    }
+
+    // Create a lookup map for users
+    const usersById = new Map<string, any>();
+    allUsers.forEach(user => {
+      usersById.set(user.id, user);
+    });
+
+    // Enrich time entries with employee names
+    const enrichedTimeEntries = timeEntries.map(entry => ({
+      ...entry,
+      employeeName: usersById.get(entry.employeeId)?.name || 'Unknown Employee'
+    }));
+
+    return enrichedTimeEntries;
   } catch (error) {
     console.error('Error in getTimeEntriesForLocation:', error);
     throw new Error('Could not get time entries');
