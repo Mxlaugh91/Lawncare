@@ -1,8 +1,7 @@
-// src/components/admin/locations/LocationDetailsDisplay.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Archive, Edit, MapPin } from 'lucide-react';
+import { Archive, Edit, MapPin, Copy, Navigation } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,13 +13,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useToast } from '@/hooks/use-toast';
 import { Location } from '@/types';
 
 interface LocationDetailsDisplayProps {
   location: Location;
   onEdit: () => void;
   onArchive: () => Promise<void>;
-  loading: boolean; // For overall page loading
+  loading: boolean;
 }
 
 export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
@@ -29,35 +35,78 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
   onArchive,
   loading,
 }) => {
+  const { toast } = useToast();
+
+  const handleCopyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(location.address);
+      toast({
+        title: 'Adresse kopiert',
+        description: 'Adressen er kopiert til utklippstavlen',
+      });
+    } catch (error) {
+      console.error('Failed to copy address:', error);
+      toast({
+        title: 'Feil',
+        description: 'Kunne ikke kopiere adresse',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleOpenInMaps = () => {
+    const encodedAddress = encodeURIComponent(location.address);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
             <MapPin className="mr-2 h-5 w-5" />
-            {location.name}
+            Stedsdetaljer
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onEdit}
-              disabled={loading}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Rediger sted
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onEdit}
+                    disabled={loading}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Rediger sted</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={loading}
-                >
-                  <Archive className="mr-2 h-4 w-4" />
-                  Arkiver sted
-                </Button>
-              </AlertDialogTrigger>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={loading}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Arkiver sted</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
@@ -93,12 +142,53 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Adresse</h4>
-                <p className="text-base">{location.address}</p>
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Navn</h4>
+                <p className="text-base">{location.name}</p>
               </div>
               <div>
                 <h4 className="font-medium text-sm text-muted-foreground mb-1">Oppstartsuke</h4>
                 <p className="text-base">Uke {location.startWeek}</p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-medium text-sm text-muted-foreground mb-1">Adresse</h4>
+              <div className="flex items-center space-x-2">
+                <p className="text-base flex-1">{location.address}</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCopyAddress}
+                        className="h-8 w-8"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Kopier adresse</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleOpenInMaps}
+                        className="h-8 w-8"
+                      >
+                        <Navigation className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Åpne i Google Maps</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
 
