@@ -21,6 +21,7 @@ import { Location, TimeEntry } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as timeEntryService from '@/services/timeEntryService';
 import { LocationFormDialog, LocationFormValues } from '@/components/admin/locations/LocationFormDialog';
+import { TimeEntryDetailsModal } from '@/components/admin/locations/TimeEntryDetailsModal';
 import { 
   Archive, 
   ArrowLeft, 
@@ -48,6 +49,12 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   const [location, setLocation] = useState<Location | null>(null);
   const [locationTimeEntries, setLocationTimeEntries] = useState<TimeEntry[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(isNew || false);
+
+  // Modal state
+  const [isTimeEntryModalOpen, setIsTimeEntryModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalData, setModalData] = useState<any[]>([]);
+  const [modalType, setModalType] = useState<'timeEntries' | 'employees' | 'edgeCutting' | 'notes'>('timeEntries');
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -155,13 +162,25 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   };
 
   const getUniqueEmployees = () => {
-    const employeeNames = new Set<string>();
+    const employeeMap = new Map<string, { name: string; totalHours: number; registrations: number }>();
+    
     locationTimeEntries.forEach(entry => {
       if (entry.employeeName) {
-        employeeNames.add(entry.employeeName);
+        const existing = employeeMap.get(entry.employeeName);
+        if (existing) {
+          existing.totalHours += entry.hours;
+          existing.registrations += 1;
+        } else {
+          employeeMap.set(entry.employeeName, {
+            name: entry.employeeName,
+            totalHours: entry.hours,
+            registrations: 1
+          });
+        }
       }
     });
-    return Array.from(employeeNames);
+    
+    return Array.from(employeeMap.values());
   };
 
   const getNotesFromTimeEntries = () => {
@@ -173,6 +192,10 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
         notes: entry.notes,
         hours: entry.hours
       }));
+  };
+
+  const getEdgeCuttingEntries = () => {
+    return locationTimeEntries.filter(entry => entry.edgeCuttingDone);
   };
 
   const formatDate = (date: any) => {
@@ -187,8 +210,34 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
     }).format(dateObj);
   };
 
-  const getEdgeCuttingCount = () => {
-    return locationTimeEntries.filter(entry => entry.edgeCuttingDone).length;
+  // Modal handlers
+  const handleCardClick = (type: 'timeEntries' | 'employees' | 'edgeCutting' | 'notes') => {
+    let title = '';
+    let data: any[] = [];
+
+    switch (type) {
+      case 'timeEntries':
+        title = `Alle timeregistreringer (${locationTimeEntries.length})`;
+        data = locationTimeEntries;
+        break;
+      case 'employees':
+        title = `Ansatte som har jobbet her (${getUniqueEmployees().length})`;
+        data = getUniqueEmployees();
+        break;
+      case 'edgeCutting':
+        title = `Kantklipping utført (${getEdgeCuttingEntries().length})`;
+        data = getEdgeCuttingEntries();
+        break;
+      case 'notes':
+        title = `Notater fra timeregistreringer (${getNotesFromTimeEntries().length})`;
+        data = getNotesFromTimeEntries();
+        break;
+    }
+
+    setModalTitle(title);
+    setModalData(data);
+    setModalType(type);
+    setIsTimeEntryModalOpen(true);
   };
 
   return (
@@ -344,13 +393,19 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
               ) : (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div 
+                      className="text-center p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+                      onClick={() => handleCardClick('timeEntries')}
+                    >
                       <div className="text-2xl font-bold text-blue-700">
                         {getTotalHours()}
                       </div>
                       <div className="text-sm text-blue-600">Timer totalt</div>
                     </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <div 
+                      className="text-center p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
+                      onClick={() => handleCardClick('timeEntries')}
+                    >
                       <div className="text-2xl font-bold text-green-700">
                         {locationTimeEntries.length}
                       </div>
@@ -359,16 +414,22 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center p-3 bg-amber-50 rounded-lg">
+                    <div 
+                      className="text-center p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors"
+                      onClick={() => handleCardClick('edgeCutting')}
+                    >
                       <div className="text-2xl font-bold text-amber-700">
-                        {getEdgeCuttingCount()}
+                        {getEdgeCuttingEntries().length}
                       </div>
                       <div className="text-sm text-amber-600 flex items-center justify-center">
                         <Scissors className="mr-1 h-3 w-3" />
                         Kantklipp utført
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
+                    <div 
+                      className="text-center p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors"
+                      onClick={() => handleCardClick('employees')}
+                    >
                       <div className="text-2xl font-bold text-purple-700">
                         {getUniqueEmployees().length}
                       </div>
@@ -383,11 +444,20 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                         Ansatte som har jobbet her:
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {getUniqueEmployees().map((employeeName, index) => (
+                        {getUniqueEmployees().slice(0, 5).map((employee, index) => (
                           <Badge key={index} variant="outline">
-                            {employeeName}
+                            {employee.name}
                           </Badge>
                         ))}
+                        {getUniqueEmployees().length > 5 && (
+                          <Badge 
+                            variant="outline" 
+                            className="cursor-pointer hover:bg-muted"
+                            onClick={() => handleCardClick('employees')}
+                          >
+                            +{getUniqueEmployees().length - 5} flere
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   )}
@@ -436,9 +506,20 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
       {!isNew && location && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="mr-2 h-5 w-5 text-purple-600" />
-              Historiske notater fra timeregistreringer
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FileText className="mr-2 h-5 w-5 text-purple-600" />
+                Historiske notater fra timeregistreringer
+              </div>
+              {getNotesFromTimeEntries().length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleCardClick('notes')}
+                >
+                  Se alle ({getNotesFromTimeEntries().length})
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -451,7 +532,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
             ) : getNotesFromTimeEntries().length > 0 ? (
               <ScrollArea className="h-[300px] pr-4">
                 <div className="space-y-3">
-                  {getNotesFromTimeEntries().map((noteEntry, index) => (
+                  {getNotesFromTimeEntries().slice(0, 3).map((noteEntry, index) => (
                     <div key={index} className="border rounded-lg p-3 bg-gray-50">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
@@ -472,6 +553,17 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
                       </p>
                     </div>
                   ))}
+                  {getNotesFromTimeEntries().length > 3 && (
+                    <div className="text-center pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleCardClick('notes')}
+                      >
+                        Se alle {getNotesFromTimeEntries().length} notater
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             ) : (
@@ -502,6 +594,15 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
           notes: location.notes || '',
         } : undefined}
         isNew={isNew}
+      />
+
+      {/* Time Entry Details Modal */}
+      <TimeEntryDetailsModal
+        isOpen={isTimeEntryModalOpen}
+        onClose={() => setIsTimeEntryModalOpen(false)}
+        title={modalTitle}
+        data={modalData}
+        type={modalType}
       />
     </div>
   );
