@@ -2,16 +2,25 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Location, TimeEntry } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as timeEntryService from '@/services/timeEntryService';
+import { LocationFormDialog, LocationFormValues } from '@/components/admin/locations/LocationFormDialog';
 import { 
   Archive, 
   ArrowLeft, 
@@ -21,7 +30,9 @@ import {
   FileText,
   Calendar,
   MapPin,
-  Scissors
+  Scissors,
+  Edit,
+  Info
 } from 'lucide-react';
 
 interface LocationsProps {
@@ -36,14 +47,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   const [loadingTimeEntries, setLoadingTimeEntries] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [locationTimeEntries, setLocationTimeEntries] = useState<TimeEntry[]>([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    maintenanceFrequency: 2,
-    edgeCuttingFrequency: 4,
-    startWeek: 18,
-    notes: ''
-  });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(isNew || false);
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -59,14 +63,6 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
         const locationData = await locationService.getLocationById(id);
         if (locationData) {
           setLocation(locationData);
-          setFormData({
-            name: locationData.name,
-            address: locationData.address,
-            maintenanceFrequency: locationData.maintenanceFrequency,
-            edgeCuttingFrequency: locationData.edgeCuttingFrequency,
-            startWeek: locationData.startWeek,
-            notes: locationData.notes || ''
-          });
 
           // Fetch time entries for this location
           setLoadingTimeEntries(true);
@@ -96,33 +92,27 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
     fetchLocationData();
   }, [id, isNew, toast, navigate]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name.includes('Frequency') || name === 'startWeek' ? parseInt(value) : value
-    }));
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-
+  const handleSaveLocation = async (data: LocationFormValues) => {
     try {
       if (isNew) {
-        await locationService.addLocation(formData);
+        await locationService.addLocation(data);
         toast({
           title: 'Suksess',
           description: 'Nytt sted ble opprettet',
         });
+        navigate('/admin/drift');
       } else if (id) {
-        await locationService.updateLocation(id, formData);
+        await locationService.updateLocation(id, data);
+        
+        // Update local state with new data
+        setLocation(prev => prev ? { ...prev, ...data } : null);
+        
         toast({
           title: 'Suksess',
           description: 'Stedet ble oppdatert',
         });
+        setIsEditModalOpen(false);
       }
-      navigate('/admin/drift');
     } catch (error) {
       console.error('Error saving location:', error);
       toast({
@@ -132,8 +122,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
           : 'Kunne ikke oppdatere stedet. Prøv igjen senere.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+      throw error; // Re-throw to prevent modal from closing
     }
   };
 
@@ -204,7 +193,8 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header with back button */}
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div className="flex items-center space-x-4">
           <Button 
             variant="outline" 
@@ -221,137 +211,117 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
         </div>
       </div>
 
-      {/* Location Information and Edit Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MapPin className="mr-2 h-5 w-5" />
-            {isNew ? 'Nytt sted' : location?.name || 'Laster...'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/4 mb-2" />
-                  <div className="h-10 bg-gray-200 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Navn *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="address">Adresse *</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <Label htmlFor="maintenanceFrequency">
-                      Frekvens Klipping (uker) *
-                    </Label>
-                    <Input
-                      id="maintenanceFrequency"
-                      name="maintenanceFrequency"
-                      type="number"
-                      min="1"
-                      value={formData.maintenanceFrequency}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edgeCuttingFrequency">
-                      Frekvens kantklipping (uker) *
-                    </Label>
-                    <Input
-                      id="edgeCuttingFrequency"
-                      name="edgeCuttingFrequency"
-                      type="number"
-                      min="1"
-                      value={formData.edgeCuttingFrequency}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="startWeek">Oppstartsuke *</Label>
-                    <Input
-                      id="startWeek"
-                      name="startWeek"
-                      type="number"
-                      min="1"
-                      max="52"
-                      value={formData.startWeek}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="notes">Notater og instrukser</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Skriv eventuelle merknader eller instrukser her"
-                    className="h-32"
-                  />
-                </div>
+      {/* Location Information Display */}
+      {!isNew && location && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <MapPin className="mr-2 h-5 w-5" />
+                {location.name}
               </div>
-
-              <div className="flex justify-end space-x-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => navigate('/admin/drift')}
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditModalOpen(true)}
                 >
-                  Avbryt
+                  <Edit className="mr-2 h-4 w-4" />
+                  Rediger sted
                 </Button>
-                {!isNew && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleArchive}
-                    disabled={loading}
-                  >
-                    <Archive className="mr-2 h-4 w-4" />
-                    Arkiver sted
-                  </Button>
-                )}
-                <Button type="submit" disabled={loading}>
-                  {loading 
-                    ? (isNew ? 'Oppretter...' : 'Lagrer...') 
-                    : (isNew ? 'Opprett sted' : 'Lagre endringer')}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Archive className="mr-2 h-4 w-4" />
+                      Arkiver sted
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Dette vil arkivere stedet og fjerne det fra aktive lister. Handlingen kan angres fra arkivet.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleArchive}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Arkiver sted
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-2" />
+                    <div className="h-6 bg-gray-200 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Adresse</h4>
+                    <p className="text-base">{location.address}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Oppstartsuke</h4>
+                    <p className="text-base">Uke {location.startWeek}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Frekvens klipping</h4>
+                    <p className="text-base">Hver {location.maintenanceFrequency}. uke</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Frekvens kantklipping</h4>
+                    <p className="text-base">Hver {location.edgeCuttingFrequency}. uke</p>
+                  </div>
+                </div>
+
+                {location.notes && (
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Notater og instrukser</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <p className="text-base whitespace-pre-wrap">{location.notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Sist klippet</h4>
+                    <p className="text-base">
+                      {location.lastMaintenanceWeek ? `Uke ${location.lastMaintenanceWeek}` : 'Ikke registrert'}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Sist kantklippet</h4>
+                    <p className="text-base">
+                      {location.lastEdgeCuttingWeek ? `Uke ${location.lastEdgeCuttingWeek}` : 'Ikke registrert'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Historical Data Section - Only show for existing locations */}
       {!isNew && location && (
@@ -516,6 +486,23 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Location Form Dialog */}
+      <LocationFormDialog
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSubmit={handleSaveLocation}
+        loading={loading}
+        initialData={location ? {
+          name: location.name,
+          address: location.address,
+          maintenanceFrequency: location.maintenanceFrequency,
+          edgeCuttingFrequency: location.edgeCuttingFrequency,
+          startWeek: location.startWeek,
+          notes: location.notes || '',
+        } : undefined}
+        isNew={isNew}
+      />
     </div>
   );
 };
