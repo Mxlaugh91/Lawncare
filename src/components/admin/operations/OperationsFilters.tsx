@@ -89,6 +89,9 @@ export const OperationsFilters = ({
   onWeekChange 
 }: OperationsFiltersProps) => {
   const { seasonSettings, fetchSeasonSettings } = useSettingsStore();
+  
+  // Internal state for immediate input updates (no delay)
+  const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery);
 
   // Fetch season settings on component mount
   useEffect(() => {
@@ -96,6 +99,25 @@ export const OperationsFilters = ({
       fetchSeasonSettings();
     }
   }, [seasonSettings, fetchSeasonSettings]);
+
+  // Sync internal state with external prop when it changes from outside
+  useEffect(() => {
+    setInternalSearchQuery(searchQuery);
+  }, [searchQuery]);
+
+  // Debounced search effect - triggers actual filtering after 300ms delay
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(internalSearchQuery);
+    }, 300);
+
+    // Cleanup timeout if internalSearchQuery changes before delay completes
+    return () => clearTimeout(timeoutId);
+  }, [internalSearchQuery, setSearchQuery]);
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInternalSearchQuery(e.target.value);
+  };
 
   return (
     <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
@@ -106,8 +128,8 @@ export const OperationsFilters = ({
             type="search"
             placeholder="Søk etter sted eller adresse..."
             className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={internalSearchQuery}
+            onChange={handleSearchInputChange}
           />
         </div>
         

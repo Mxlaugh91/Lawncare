@@ -1,14 +1,20 @@
-import { useState, useEffect } from 'react';
+// src/pages/admin/Locations.tsx
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Location } from '@/types';
 import * as locationService from '@/services/locationService';
-import { Archive } from 'lucide-react';
+import { LocationFormDialog, LocationFormValues } from '@/components/admin/locations/LocationFormDialog';
+import { TimeEntryDetailsModal } from '@/components/admin/locations/TimeEntryDetailsModal';
+
+// New imports for refactored components and hooks
+import { useLocationStore } from '@/store/locationStore';
+import { useLocationTimeEntries } from '@/hooks/useLocationTimeEntries';
+import { LocationDetailsDisplay } from '@/components/admin/locations/LocationDetailsDisplay';
+import { LocationSummaryCards } from '@/components/admin/locations/LocationSummaryCards';
+import { LocationHistoricalNotes } from '@/components/admin/locations/LocationHistoricalNotes';
 
 interface LocationsProps {
   isNew?: boolean;
@@ -18,106 +24,113 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [location, setLocation] = useState<Location | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    maintenanceFrequency: 2,
-    edgeCuttingFrequency: 4,
-    startWeek: 18,
-    notes: ''
-  });
 
+  // Use Zustand store for location data
+  const { locations: allLocations, updateLocation, archiveLocation } = useLocationStore();
+  const [location, setLocation] = useState<Location | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(true);
+
+  // Use custom hook for time entries
+  const { timeEntries: locationTimeEntries, loading: loadingTimeEntries, error: timeEntriesError, refetch: refetchTimeEntries } = useLocationTimeEntries(id);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(isNew || false);
+
+  // Modal state for TimeEntryDetailsModal
+  const [isTimeEntryModalOpen, setIsTimeEntryModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalData, setModalData] = useState<any[]>([]);
+  const [modalType, setModalType] = useState<'timeEntries' | 'employees' | 'edgeCutting' | 'notes'>('timeEntries');
+
+  // Fetch location from Zustand store or service if not found
   useEffect(() => {
-    const fetchLocation = async () => {
-      if (!id || isNew) {
-        setLoading(false);
+    const fetchAndSetLocation = async () => {
+      if (isNew) {
+        setLoadingLocation(false);
         return;
       }
 
-      try {
-        const locationData = await locationService.getLocationById(id);
-        if (locationData) {
-          setLocation(locationData);
-          setFormData({
-            name: locationData.name,
-            address: locationData.address,
-            maintenanceFrequency: locationData.maintenanceFrequency,
-            edgeCuttingFrequency: locationData.edgeCuttingFrequency,
-            startWeek: locationData.startWeek,
-            notes: locationData.notes || ''
-          });
-        } else {
+      if (!id) {
+        navigate('/admin/drift'); // Redirect if no ID for existing location
+        return;
+      }
+
+      setLoadingLocation(true);
+      // Try to get from Zustand store first
+      const foundLocation = allLocations.find(loc => loc.id === id);
+
+      if (foundLocation) {
+        setLocation(foundLocation);
+        setLoadingLocation(false);
+      } else {
+        // If not in store, fetch from service
+        try {
+          const locationData = await locationService.getLocationById(id);
+          if (locationData) {
+            setLocation(locationData);
+            // Optionally, add this location to the store if it's not there
+            // (though initRealtimeUpdates should handle this for active locations)
+          } else {
+            toast({
+              title: 'Feil',
+              description: 'Fant ikke stedet',
+              variant: 'destructive',
+            });
+            navigate('/admin/drift');
+          }
+        } catch (error) {
+          console.error('Error fetching location data:', error);
           toast({
             title: 'Feil',
-            description: 'Fant ikke stedet',
+            description: 'Kunne ikke hente stedsdata. Prøv igjen senere.',
             variant: 'destructive',
           });
-          navigate('/admin/drift');
+        } finally {
+          setLoadingLocation(false);
         }
-      } catch (error) {
-        console.error('Error fetching location:', error);
-        toast({
-          title: 'Feil',
-          description: 'Kunne ikke hente stedsdata. Prøv igjen senere.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchLocation();
-  }, [id, isNew, toast, navigate]);
+    fetchAndSetLocation();
+  }, [id, isNew, allLocations, navigate, toast]); // Depend on allLocations for real-time updates
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name.includes('Frequency') || name === 'startWeek' ? parseInt(value) : value
-    }));
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-
+  // Handle location form submission (add/edit)
+  const handleSaveLocation = async (data: LocationFormValues) => {
     try {
       if (isNew) {
-        await locationService.addLocation(formData);
+        await locationService.addLocation(data); // Service call, Zustand store will update via listener
         toast({
           title: 'Suksess',
           description: 'Nytt sted ble opprettet',
         });
+        navigate('/admin/drift');
       } else if (id) {
-        await locationService.updateLocation(id, formData);
+        await updateLocation(id, data); // Zustand action, updates local state and service
         toast({
           title: 'Suksess',
           description: 'Stedet ble oppdatert',
         });
+        setIsEditModalOpen(false);
       }
-      navigate('/admin/drift');
     } catch (error) {
       console.error('Error saving location:', error);
       toast({
         title: 'Feil',
-        description: isNew 
+        description: isNew
           ? 'Kunne ikke opprette nytt sted. Prøv igjen senere.'
           : 'Kunne ikke oppdatere stedet. Prøv igjen senere.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+      throw error; // Re-throw to prevent modal from closing
     }
   };
 
-  const handleArchive = async () => {
+  // Handle archiving a location
+  const handleArchiveLocation = async () => {
     if (!id) return;
-    
+
     try {
-      setLoading(true);
-      await locationService.archiveLocation(id);
+      setLoadingLocation(true); // Set loading for the archive action
+      await archiveLocation(id); // Zustand action, updates local state and service
       toast({
         title: 'Suksess',
         description: 'Stedet ble arkivert',
@@ -131,145 +144,149 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setLoadingLocation(false);
     }
   };
 
+  // Memoized callback for card clicks to open modals
+  const handleCardClick = useCallback((type: 'timeEntries' | 'employees' | 'edgeCutting' | 'notes') => {
+    let title = '';
+    let data: any[] = [];
+
+    // Helper functions for data aggregation (moved from original Locations.tsx)
+    const getUniqueEmployees = () => {
+      const employeeMap = new Map<string, { name: string; totalHours: number; registrations: number }>();
+      locationTimeEntries.forEach(entry => {
+        if (entry.employeeName) {
+          const existing = employeeMap.get(entry.employeeName);
+          if (existing) {
+            existing.totalHours += entry.hours;
+            existing.registrations += 1;
+          } else {
+            employeeMap.set(entry.employeeName, {
+              name: entry.employeeName,
+              totalHours: entry.hours,
+              registrations: 1
+            });
+          }
+        }
+      });
+      return Array.from(employeeMap.values());
+    };
+
+    const getNotesFromTimeEntries = () => {
+      return locationTimeEntries
+        .filter(entry => entry.notes && entry.notes.trim() !== '')
+        .map(entry => ({
+          date: entry.date,
+          employeeName: entry.employeeName,
+          notes: entry.notes,
+          hours: entry.hours
+        }));
+    };
+
+    const getEdgeCuttingEntries = () => {
+      return locationTimeEntries.filter(entry => entry.edgeCuttingDone);
+    };
+
+    switch (type) {
+      case 'timeEntries':
+        title = `Alle timeregistreringer (${locationTimeEntries.length})`;
+        data = locationTimeEntries;
+        break;
+      case 'employees':
+        title = `Ansatte som har jobbet her (${getUniqueEmployees().length})`;
+        data = getUniqueEmployees();
+        break;
+      case 'edgeCutting':
+        title = `Kantklipping utført (${getEdgeCuttingEntries().length})`;
+        data = getEdgeCuttingEntries();
+        break;
+      case 'notes':
+        title = `Notater fra timeregistreringer (${getNotesFromTimeEntries().length})`;
+        data = getNotesFromTimeEntries();
+        break;
+    }
+
+    setModalTitle(title);
+    setModalData(data);
+    setModalType(type);
+    setIsTimeEntryModalOpen(true);
+  }, [locationTimeEntries]); // Depend on locationTimeEntries for data aggregation
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {isNew ? 'Legg til nytt sted' : 'Rediger sted'}
-        </h1>
+    <div className="space-y-4">
+      {/* Header with back button */}
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/admin/drift')}
+            className="flex items-center"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Tilbake til Klippeliste
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isNew ? 'Legg til nytt sted' : 'Stedsdetaljer'}
+          </h1>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{isNew ? 'Nytt sted' : location?.name || 'Laster...'}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/4 mb-2" />
-                  <div className="h-10 bg-gray-200 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Navn *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+      {/* Historical Data Section - Only show for existing locations */}
+      {!isNew && location && (
+        <LocationSummaryCards
+          timeEntries={locationTimeEntries}
+          loading={loadingTimeEntries}
+          onCardClick={handleCardClick}
+        />
+      )}
 
-                <div>
-                  <Label htmlFor="address">Adresse *</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+      {/* Historical Notes Section */}
+      {!isNew && location && (
+        <LocationHistoricalNotes
+          timeEntries={locationTimeEntries}
+          loading={loadingTimeEntries}
+          onCardClick={handleCardClick}
+        />
+      )}
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <Label htmlFor="maintenanceFrequency">
-                      Frekvens Klipping (uker) *
-                    </Label>
-                    <Input
-                      id="maintenanceFrequency"
-                      name="maintenanceFrequency"
-                      type="number"
-                      min="1"
-                      value={formData.maintenanceFrequency}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
+      {/* Location Details Display - MOVED TO BOTTOM */}
+      {!isNew && location && (
+        <LocationDetailsDisplay
+          location={location}
+          onEdit={() => setIsEditModalOpen(true)}
+          onArchive={handleArchiveLocation}
+          loading={loadingLocation}
+        />
+      )}
 
-                  <div>
-                    <Label htmlFor="edgeCuttingFrequency">
-                      Frekvens kantklipping (uker) *
-                    </Label>
-                    <Input
-                      id="edgeCuttingFrequency"
-                      name="edgeCuttingFrequency"
-                      type="number"
-                      min="1"
-                      value={formData.edgeCuttingFrequency}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
+      {/* Location Form Dialog (for add/edit) */}
+      <LocationFormDialog
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSubmit={handleSaveLocation}
+        loading={loadingLocation} // Use loadingLocation for form submission
+        initialData={location ? {
+          name: location.name,
+          address: location.address,
+          maintenanceFrequency: location.maintenanceFrequency,
+          edgeCuttingFrequency: location.edgeCuttingFrequency,
+          startWeek: location.startWeek,
+          notes: location.notes || '',
+        } : undefined}
+        isNew={isNew}
+      />
 
-                  <div>
-                    <Label htmlFor="startWeek">Oppstartsuke *</Label>
-                    <Input
-                      id="startWeek"
-                      name="startWeek"
-                      type="number"
-                      min="1"
-                      max="52"
-                      value={formData.startWeek}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="notes">Notater og instrukser</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Skriv eventuelle merknader eller instrukser her"
-                    className="h-32"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => navigate('/admin/drift')}
-                >
-                  Avbryt
-                </Button>
-                {!isNew && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleArchive}
-                    disabled={loading}
-                  >
-                    <Archive className="mr-2 h-4 w-4" />
-                    Arkiver sted
-                  </Button>
-                )}
-                <Button type="submit" disabled={loading}>
-                  {loading 
-                    ? (isNew ? 'Oppretter...' : 'Lagrer...') 
-                    : (isNew ? 'Opprett sted' : 'Lagre endringer')}
-                </Button>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+      {/* Time Entry Details Modal */}
+      <TimeEntryDetailsModal
+        isOpen={isTimeEntryModalOpen}
+        onClose={() => setIsTimeEntryModalOpen(false)}
+        title={modalTitle}
+        data={modalData}
+        type={modalType}
+      />
     </div>
   );
 };

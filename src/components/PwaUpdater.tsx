@@ -1,4 +1,4 @@
-// src/components/PwaUpdater.tsx - PWA oppdatering med cache-busting reload
+// src/components/PwaUpdater.tsx - Fixed PWA updater without aggressive intervals
 
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useEffect } from 'react';
@@ -11,39 +11,29 @@ function PwaUpdater() {
     onRegisteredSW(swUrl, registration) {
       console.log('SW registered:', swUrl);
       
-      // Sjekk for oppdateringer hver 30. minutt
-      if (registration) {
-        setInterval(() => {
-          registration.update();
-        }, 30 * 1000);
-      }
+      // REMOVED: Aggressive 30-second interval updates that cause InvalidStateError
+      // The browser will handle update checks automatically at appropriate intervals
     },
     onOfflineReady() {
       console.log('App ready for offline use');
     },
   });
 
-  // Automatisk oppdatering når ny versjon er klar
+  // Automatic update when new version is available
   useEffect(() => {
     if (needRefresh) {
       console.log('New version available, updating automatically...');
+      
+      // SIMPLIFIED: Just call updateServiceWorker with reload flag
+      // The vite-plugin-pwa will handle the update and reload properly
       updateServiceWorker(true);
       
-      // CACHE-BUSTING: Legg til unik parameter for å tvinge reload av alle ressurser
-      setTimeout(() => {
-        const timestamp = Date.now();
-        const currentUrl = new URL(window.location.href);
-        
-        // Legg til cache-busting parameter
-        currentUrl.searchParams.set('_cb', timestamp.toString());
-        
-        // Erstatt current URL med den nye cache-busting URL-en
-        window.location.replace(currentUrl.href);
-      }, 100);
+      // REMOVED: Manual window.location.replace that could interfere
+      // with the plugin's built-in update mechanism
     }
   }, [needRefresh, updateServiceWorker]);
 
-  // Ingen UI - alt skjer automatisk i bakgrunnen
+  // No UI - everything happens automatically in the background
   return null;
 }
 
