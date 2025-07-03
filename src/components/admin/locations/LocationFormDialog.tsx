@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,19 +50,45 @@ export const LocationFormDialog = ({
   } = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
     defaultValues: {
-      name: initialData?.name || '',
-      address: initialData?.address || '',
-      maintenanceFrequency: initialData?.maintenanceFrequency || 2,
-      edgeCuttingFrequency: initialData?.edgeCuttingFrequency || 4,
-      startWeek: initialData?.startWeek || 18,
-      notes: initialData?.notes || '',
+      name: '',
+      address: '',
+      maintenanceFrequency: 2,
+      edgeCuttingFrequency: 4,
+      startWeek: 18,
+      notes: '',
     },
   });
+
+  // Reset form when dialog opens with proper data
+  useEffect(() => {
+    if (isOpen) {
+      if (isNew) {
+        // Reset to default values for new location
+        reset({
+          name: '',
+          address: '',
+          maintenanceFrequency: 2,
+          edgeCuttingFrequency: 4,
+          startWeek: 18,
+          notes: '',
+        });
+      } else if (initialData) {
+        // Reset with existing location data for editing
+        reset({
+          name: initialData.name || '',
+          address: initialData.address || '',
+          maintenanceFrequency: initialData.maintenanceFrequency || 2,
+          edgeCuttingFrequency: initialData.edgeCuttingFrequency || 4,
+          startWeek: initialData.startWeek || 18,
+          notes: initialData.notes || '',
+        });
+      }
+    }
+  }, [isOpen, isNew, initialData, reset]);
 
   const handleFormSubmit = async (data: LocationFormValues) => {
     try {
       await onSubmit(data);
-      reset();
       onClose();
     } catch (error) {
       // Error handling is done in parent component
