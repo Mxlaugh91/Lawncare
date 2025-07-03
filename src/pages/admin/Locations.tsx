@@ -234,16 +234,6 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
         </div>
       </div>
 
-      {/* Location Information Display */}
-      {!isNew && location && (
-        <LocationDetailsDisplay
-          location={location}
-          onEdit={() => setIsEditModalOpen(true)}
-          onArchive={handleArchiveLocation}
-          loading={loadingLocation}
-        />
-      )}
-
       {/* Historical Data Section - Only show for existing locations */}
       {!isNew && location && (
         <LocationSummaryCards
@@ -259,6 +249,16 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
           timeEntries={locationTimeEntries}
           loading={loadingTimeEntries}
           onCardClick={handleCardClick}
+        />
+      )}
+
+      {/* Location Details Display - MOVED TO BOTTOM */}
+      {!isNew && location && (
+        <LocationDetailsDisplay
+          location={location}
+          onEdit={() => setIsEditModalOpen(true)}
+          onArchive={handleArchiveLocation}
+          loading={loadingLocation}
         />
       )}
 
