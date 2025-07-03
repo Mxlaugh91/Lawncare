@@ -67,6 +67,36 @@ const getEdgeCuttingStatus = (location: LocationWithStatus) => {
   }
 };
 
+const getTotalHours = (location: LocationWithStatus) => {
+  if (!location.timeEntries || location.timeEntries.length === 0) {
+    return 0;
+  }
+  return location.timeEntries.reduce((total, entry) => total + entry.hours, 0);
+};
+
+const getEmployeeSummary = (location: LocationWithStatus) => {
+  if (!location.timeEntries || location.timeEntries.length === 0) {
+    return 'Ikke registrert';
+  }
+
+  // Get unique employee names
+  const uniqueEmployees = Array.from(
+    new Set(location.timeEntries.map(entry => entry.employeeName).filter(Boolean))
+  );
+
+  if (uniqueEmployees.length === 0) {
+    return 'Ikke registrert';
+  }
+
+  if (uniqueEmployees.length === 1) {
+    return uniqueEmployees[0];
+  }
+
+  // Show first employee + count of others
+  const additionalCount = uniqueEmployees.length - 1;
+  return `${uniqueEmployees[0]} (+${additionalCount} andre)`;
+};
+
 export const LocationMobileCards = ({ 
   filteredLocations, 
   loading, 
@@ -139,14 +169,14 @@ export const LocationMobileCards = ({
                       <div>
                         <div className="text-xs font-medium">Tidsbruk</div>
                         <div className="text-xs">
-                          {location.timeEntries[0].hours} timer
+                          {getTotalHours(location)} timer
                         </div>
                       </div>
 
                       <div>
                         <div className="text-xs font-medium">Utført av</div>
                         <div className="text-xs">
-                          {location.timeEntries[0].employeeName || 'Ikke registrert'}
+                          {getEmployeeSummary(location)}
                         </div>
                       </div>
                     </>

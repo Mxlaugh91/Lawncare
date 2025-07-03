@@ -44,6 +44,36 @@ export const LocationListTable = ({ filteredLocations, loading }: LocationListTa
     }
   };
 
+  const getTotalHours = (location: LocationWithStatus) => {
+    if (!location.timeEntries || location.timeEntries.length === 0) {
+      return 0;
+    }
+    return location.timeEntries.reduce((total, entry) => total + entry.hours, 0);
+  };
+
+  const getEmployeeSummary = (location: LocationWithStatus) => {
+    if (!location.timeEntries || location.timeEntries.length === 0) {
+      return 'Ikke registrert';
+    }
+
+    // Get unique employee names
+    const uniqueEmployees = Array.from(
+      new Set(location.timeEntries.map(entry => entry.employeeName).filter(Boolean))
+    );
+
+    if (uniqueEmployees.length === 0) {
+      return 'Ikke registrert';
+    }
+
+    if (uniqueEmployees.length === 1) {
+      return uniqueEmployees[0];
+    }
+
+    // Show first employee + count of others
+    const additionalCount = uniqueEmployees.length - 1;
+    return `${uniqueEmployees[0]} (+${additionalCount} andre)`;
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -101,15 +131,12 @@ export const LocationListTable = ({ filteredLocations, loading }: LocationListTa
               </TableCell>
               <TableCell className="hidden lg:table-cell">
                 {location.timeEntries && location.timeEntries.length > 0 
-                  ? `${location.timeEntries[0].hours} timer`
+                  ? `${getTotalHours(location)} timer`
                   : '-'
                 }
               </TableCell>
               <TableCell className="hidden lg:table-cell">
-                {location.timeEntries && location.timeEntries.length > 0 
-                  ? location.timeEntries[0].employeeName 
-                  : 'Ikke registrert'
-                }
+                {getEmployeeSummary(location)}
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
