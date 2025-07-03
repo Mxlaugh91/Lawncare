@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapPin, CheckCircle2 } from 'lucide-react';
 import { LocationWithStatus } from '@/types';
 import * as locationService from '@/services/locationService';
+import { useLocationStore } from '@/store/locationStore';
 import { useToast } from '@/hooks/use-toast';
 import { getISOWeekNumber } from '@/lib/utils';
 
@@ -22,6 +23,9 @@ const Operations = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWeek, setSelectedWeek] = useState(getISOWeekNumber(new Date()));
   const [expandedLocationId, setExpandedLocationId] = useState<string | null>(null);
+
+  // Get locations from Zustand store for real-time updates
+  const { locations: storeLocations } = useLocationStore();
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -43,7 +47,7 @@ const Operations = () => {
     };
 
     fetchLocations();
-  }, [selectedWeek, toast]);
+  }, [selectedWeek, storeLocations, toast]); // Added storeLocations to dependency array
 
   useEffect(() => {
     let filtered = [...locations];

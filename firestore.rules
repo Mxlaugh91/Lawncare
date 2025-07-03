@@ -1,82 +1,219 @@
-// firestore.rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection
+
+    // Hjelpefunksjoner for å forenkle reglene
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // Sjekker om brukeren er autentisert OG har rollen 'admin' i brukeroversikten
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isEmployee() {
+      // Sjekker om brukeren er autentisert OG har rollen 'employee' i brukeroversikten
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+    }
+
+    function isOwner(userId) {
+      // Sjekker om den autentiserte brukeren er eieren av dokumentet
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      // Validerer at strengen er en gyldig e-post
+      return email is string && email.matches('.*@.*\\..*');
+    }
+
+    function isValidWeekNumber(week) {
+      // Validerer at ukenummeret er et gyldig heltall mellom 1 og 53
+      return week is int && week >= 1 && week <= 53;
+    }
+
+    // --- Samling: users ---
     match /users/{userId} {
-      // Users can read their own document
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // Admins can read all user documents
-      allow read: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      
-      // Only allow creation/updates by admins
-      allow create, update: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Alle autentiserte brukere kan lese alle brukerdokumenter
+      // Dette er nødvendig for å vise ansattnavn, teamkoordinering, osv.
+      allow read: if isAuthenticated();
+
+      // Kun administratorer kan opprette eller oppdatere brukerdokumenter
+      // Dataene må inneholde 'email', 'name', 'role' og være av riktig type/format
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasAll(['email', 'name', 'role']) &&
+        isValidEmail(request.resource.data.email) &&
+        request.resource.data.name is string &&
+        request.resource.data.role in ['admin', 'employee'];
+
+      // Kun administratorer kan slette brukerdokumenter
+      allow delete: if isAdmin();
     }
 
-    // Locations collection
+    // --- Samling: locations ---
     match /locations/{locationId} {
-      // Authenticated users can read
-      allow read: if request.auth != null;
-      
-      // Only admins can write
-      allow create, update, delete: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Alle autentiserte brukere kan lese stedsdata
+      allow read: if isAuthenticated();
+
+      // Kun administratorer kan opprette eller slette stedsdata
+      allow create, delete: if isAdmin();
+
+      // Administratorer kan oppdatere alle felt
+      allow update: if isAdmin();
+
+      // Ansatte kan kun oppdatere lastMaintenanceWeek, lastEdgeCuttingWeek og updatedAt
+      // Dette er nødvendig for timeEntry-transaksjoner
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMaintenanceWeek', 'lastEdgeCuttingWeek', 'updatedAt']) &&
+        (request.resource.data.keys().hasAny(['lastMaintenanceWeek']) == false || 
+         isValidWeekNumber(request.resource.data.lastMaintenanceWeek)) &&
+        (request.resource.data.keys().hasAny(['lastEdgeCuttingWeek']) == false || 
+         isValidWeekNumber(request.resource.data.lastEdgeCuttingWeek));
+
+      // Validering ved opprettelse av stedsdata (kun for administratorer)
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasAll(['name', 'address', 'maintenanceFrequency', 'edgeCuttingFrequency', 'startWeek']) &&
+        request.resource.data.name is string &&
+        request.resource.data.address is string &&
+        request.resource.data.maintenanceFrequency is int &&
+        request.resource.data.maintenanceFrequency > 0 &&
+        request.resource.data.edgeCuttingFrequency is int &&
+        request.resource.data.edgeCuttingFrequency > 0 &&
+        isValidWeekNumber(request.resource.data.startWeek);
     }
 
-    // Time entries collection
+    // --- Samling: timeEntries ---
     match /timeEntries/{entryId} {
-      // Users can read their own entries, admins can read all
-      allow read: if request.auth != null && (
-        resource.data.employeeId == request.auth.uid ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-      );
-      
-      // Users can create entries for themselves
-      allow create: if request.auth != null && 
-        request.resource.data.employeeId == request.auth.uid;
-      
-      // Only admins can update/delete
-      allow update, delete: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Alle autentiserte brukere kan lese alle tidsregistreringer
+      // Dette er nødvendig for ukestatus, teamkoordinering, dashboards, osv.
+      allow read: if isAuthenticated();
+
+      // Brukere kan opprette egne tidsregistreringer
+      // Dataene må inneholde 'locationId', 'employeeId', 'hours' og 'hours' må være positivt tall
+      allow create: if isAuthenticated() &&
+        request.resource.data.employeeId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['locationId', 'employeeId', 'hours']) &&
+        request.resource.data.hours is number &&
+        request.resource.data.hours > 0;
+
+      // Kun administratorer kan oppdatere eller slette tidsregistreringer
+      allow update, delete: if isAdmin();
+
+      // Brukere kan oppdatere tidsregistreringer de er tagget i (f.eks. for å markere som fullført)
+      allow update: if isAuthenticated() &&
+        resource.data.keys().hasAny(['taggedEmployeeIds']) &&
+        request.auth.uid in resource.data.taggedEmployeeIds;
     }
 
-    // Mowers and service intervals
+    // --- Samling: mowers ---
     match /mowers/{mowerId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Alle autentiserte brukere kan lese klipperdata
+      allow read: if isAuthenticated();
+
+      // Kun administratorer kan opprette eller slette klipperdata
+      allow create, delete: if isAdmin();
+
+      // Administratorer kan oppdatere alle felt.
+      // Ansatte kan kun oppdatere 'totalHours' (for brukslogging) og 'updatedAt'.
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalHours', 'updatedAt']) &&
+          request.resource.data.totalHours is number &&
+          request.resource.data.totalHours >= resource.data.totalHours);
+
+      // Validering ved opprettelse av klipperdata
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasAll(['name', 'model', 'serialNumber']) &&
+        request.resource.data.name is string &&
+        request.resource.data.model is string &&
+        request.resource.data.serialNumber is string;
     }
 
+    // --- Samling: serviceIntervals ---
     match /serviceIntervals/{intervalId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      // Alle autentiserte brukere kan lese serviceintervaller
+      allow read: if isAuthenticated();
+
+      // Kun administratorer kan opprette eller slette serviceintervaller
+      allow create, delete: if isAdmin();
+
+      // Alle autentiserte brukere kan oppdatere serviceintervaller (f.eks. for å tilbakestille intervaller)
+      allow update: if isAuthenticated();
+
+      // Validering ved opprettelse av serviceintervall data
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasAll(['mowerId', 'description', 'hourInterval']) &&
+        request.resource.data.mowerId is string &&
+        request.resource.data.description is string &&
+        request.resource.data.hourInterval is int &&
+        request.resource.data.hourInterval > 0;
     }
 
-    // Notifications
+    // --- Samling: serviceLogs ---
+    match /serviceLogs/{logId} {
+      // Alle autentiserte brukere kan lese service logger
+      allow read: if isAuthenticated();
+
+      // Alle autentiserte brukere kan opprette service logger
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['mowerId', 'serviceIntervalId', 'performedBy', 'hoursAtService']) &&
+        request.resource.data.mowerId is string &&
+        request.resource.data.serviceIntervalId is string &&
+        request.resource.data.performedBy is string &&
+        request.resource.data.hoursAtService is number &&
+        request.resource.data.hoursAtService >= 0;
+
+      // Kun administratorer kan oppdatere eller slette service logger
+      allow update, delete: if isAdmin();
+    }
+
+    // --- Samling: notifications ---
     match /notifications/{notificationId} {
-      // Users can only read their own notifications
-      allow read, update: if request.auth != null && 
+      // Brukere kan bare lese sine egne varsler
+      allow read: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
-      
-      // System can create notifications
-      allow create: if request.auth != null;
+
+      // Alle autentiserte brukere kan opprette varsler (for taggingsystem)
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['userId', 'title', 'message']) &&
+        request.resource.data.userId is string &&
+        request.resource.data.title is string &&
+        request.resource.data.message is string;
+
+      // Brukere kan bare oppdatere sine egne varsler (f.eks. markere som lest)
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+
+      // Kun administratorer kan slette varsler
+      allow delete: if isAdmin();
     }
 
-    // Season settings
+    // --- Samling: season_settings ---
     match /season_settings/{settingId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Alle autentiserte brukere kan lese sesonginnstillinger
+      allow read: if isAuthenticated();
+
+      // Kun administratorer kan opprette, oppdatere eller slette sesonginnstillinger
+      allow create, update, delete: if isAdmin();
+
+      // Validering av sesonginnstillinger data
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasAll(['startWeek', 'endWeek', 'defaultFrequency']) &&
+        isValidWeekNumber(request.resource.data.startWeek) &&
+        isValidWeekNumber(request.resource.data.endWeek) &&
+        request.resource.data.startWeek < request.resource.data.endWeek &&
+        request.resource.data.defaultFrequency is int &&
+        request.resource.data.defaultFrequency > 0;
+    }
+
+    // --- Nekt tilgang til andre samlinger/dokumenter som ikke er eksplisitt definert ---
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
