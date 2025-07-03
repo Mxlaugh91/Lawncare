@@ -59,11 +59,23 @@ service cloud.firestore {
       // Alle autentiserte brukere kan lese stedsdata
       allow read: if isAuthenticated();
 
-      // Kun administratorer kan opprette, oppdatere eller slette stedsdata
-      allow create, update, delete: if isAdmin();
+      // Kun administratorer kan opprette eller slette stedsdata
+      allow create, delete: if isAdmin();
 
-      // Validering ved opprettelse/oppdatering av stedsdata
-      allow create, update: if isAdmin() &&
+      // Administratorer kan oppdatere alle felt
+      allow update: if isAdmin();
+
+      // Ansatte kan kun oppdatere lastMaintenanceWeek, lastEdgeCuttingWeek og updatedAt
+      // Dette er nødvendig for timeEntry-transaksjoner
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMaintenanceWeek', 'lastEdgeCuttingWeek', 'updatedAt']) &&
+        (request.resource.data.keys().hasAny(['lastMaintenanceWeek']) == false || 
+         isValidWeekNumber(request.resource.data.lastMaintenanceWeek)) &&
+        (request.resource.data.keys().hasAny(['lastEdgeCuttingWeek']) == false || 
+         isValidWeekNumber(request.resource.data.lastEdgeCuttingWeek));
+
+      // Validering ved opprettelse av stedsdata (kun for administratorer)
+      allow create: if isAdmin() &&
         request.resource.data.keys().hasAll(['name', 'address', 'maintenanceFrequency', 'edgeCuttingFrequency', 'startWeek']) &&
         request.resource.data.name is string &&
         request.resource.data.address is string &&
