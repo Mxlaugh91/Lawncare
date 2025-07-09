@@ -69,9 +69,9 @@ service cloud.firestore {
       // Dette er nødvendig for timeEntry-transaksjoner
       allow update: if isAuthenticated() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMaintenanceWeek', 'lastEdgeCuttingWeek', 'updatedAt']) &&
-        (request.resource.data.keys().hasAny(['lastMaintenanceWeek']) == false || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMaintenanceWeek']) == false || 
          isValidWeekNumber(request.resource.data.lastMaintenanceWeek)) &&
-        (request.resource.data.keys().hasAny(['lastEdgeCuttingWeek']) == false || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastEdgeCuttingWeek']) == false || 
          isValidWeekNumber(request.resource.data.lastEdgeCuttingWeek));
 
       // Validering ved opprettelse av stedsdata (kun for administratorer)
