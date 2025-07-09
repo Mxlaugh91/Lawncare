@@ -31,12 +31,16 @@ interface LocationDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   location: Location | null;
+  lastMaintenanceEmployeeName?: string | null;
+  lastEdgeCuttingEmployeeName?: string | null;
 }
 
 export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
   isOpen,
   onClose,
   location,
+  lastMaintenanceEmployeeName,
+  lastEdgeCuttingEmployeeName,
 }) => {
   const { toast } = useToast();
 
@@ -272,18 +276,36 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
             {/* Status Information */}
             <div className="bg-muted/30 rounded-lg p-4">
               <h4 className="font-medium mb-3">Status informasjon</h4>
-              <div className="grid gap-3 md:grid-cols-2 text-sm">
+              <div className="space-y-3 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Sist klippet:</span>
-                  <span className="ml-2 font-medium">
-                    {location.lastMaintenanceWeek ? `Uke ${location.lastMaintenanceWeek}` : 'Ikke registrert'}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Sist klippet:</span>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {location.lastMaintenanceWeek ? `Uke ${location.lastMaintenanceWeek}` : 'Ikke registrert'}
+                      </div>
+                      {lastMaintenanceEmployeeName && (
+                        <div className="text-xs text-muted-foreground">
+                          av {lastMaintenanceEmployeeName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Sist kantklippet:</span>
-                  <span className="ml-2 font-medium">
-                    {location.lastEdgeCuttingWeek ? `Uke ${location.lastEdgeCuttingWeek}` : 'Ikke registrert'}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Sist kantklippet:</span>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {location.lastEdgeCuttingWeek ? `Uke ${location.lastEdgeCuttingWeek}` : 'Ikke registrert'}
+                      </div>
+                      {lastEdgeCuttingEmployeeName && (
+                        <div className="text-xs text-muted-foreground">
+                          av {lastEdgeCuttingEmployeeName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

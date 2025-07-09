@@ -60,6 +60,8 @@ const EmployeeDashboard = () => {
   }>>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [lastMaintenanceEmployee, setLastMaintenanceEmployee] = useState<string | null>(null);
+  const [lastEdgeCuttingEmployee, setLastEdgeCuttingEmployee] = useState<string | null>(null);
 
   const currentWeek = getISOWeekNumber(new Date());
 
@@ -147,14 +149,34 @@ const EmployeeDashboard = () => {
     }
   };
 
-  const handleLocationClick = (location: LocationWithStatus) => {
+  const handleLocationClick = async (location: LocationWithStatus) => {
     setSelectedLocation(location);
+    setLastMaintenanceEmployee(null);
+    setLastEdgeCuttingEmployee(null);
     setIsLocationModalOpen(true);
+    
+    try {
+      // Fetch latest maintenance entry
+      const latestMaintenanceEntry = await timeEntryService.getLatestTimeEntryForLocationAndType(location.id, false);
+      if (latestMaintenanceEntry) {
+        setLastMaintenanceEmployee(latestMaintenanceEntry.employeeName || null);
+      }
+      
+      // Fetch latest edge cutting entry
+      const latestEdgeCuttingEntry = await timeEntryService.getLatestTimeEntryForLocationAndType(location.id, true);
+      if (latestEdgeCuttingEntry) {
+        setLastEdgeCuttingEmployee(latestEdgeCuttingEntry.employeeName || null);
+      }
+    } catch (error) {
+      console.error('Error fetching employee names:', error);
+    }
   };
 
   const handleCloseLocationModal = () => {
     setIsLocationModalOpen(false);
     setSelectedLocation(null);
+    setLastMaintenanceEmployee(null);
+    setLastEdgeCuttingEmployee(null);
   };
 
   return (
@@ -330,6 +352,8 @@ const EmployeeDashboard = () => {
         isOpen={isLocationModalOpen}
         onClose={handleCloseLocationModal}
         location={selectedLocation}
+        lastMaintenanceEmployeeName={lastMaintenanceEmployee}
+        lastEdgeCuttingEmployeeName={lastEdgeCuttingEmployee}
       />
     </div>
   );

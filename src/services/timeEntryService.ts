@@ -266,6 +266,49 @@ export const getRecentTimeEntries = async (count: number = 5) => {
   }
 };
 
+export const getLatestTimeEntryForLocationAndType = async (locationId: string, isEdgeCutting: boolean = false) => {
+  try {
+    let q = query(
+      collection(db, 'timeEntries'),
+      where('locationId', '==', locationId),
+      orderBy('date', 'desc'),
+      limit(1)
+    );
+
+    if (isEdgeCutting) {
+      q = query(
+        collection(db, 'timeEntries'),
+        where('locationId', '==', locationId),
+        where('edgeCuttingDone', '==', true),
+        orderBy('date', 'desc'),
+        limit(1)
+      );
+    }
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const timeEntry = {
+      id: querySnapshot.docs[0].id,
+      ...querySnapshot.docs[0].data()
+    } as TimeEntry;
+    
+    // Get employee name if not already present
+    if (!timeEntry.employeeName && timeEntry.employeeId) {
+      const employee = await userService.getUserById(timeEntry.employeeId);
+      timeEntry.employeeName = employee?.name || 'Unknown Employee';
+    }
+    
+    return timeEntry;
+  } catch (error) {
+    console.error('Error in getLatestTimeEntryForLocationAndType:', error);
+    throw new Error('Could not get latest time entry');
+  }
+};
+
 export const tagEmployeeForTimeEntry = async (timeEntryId: string, taggedEmployeeId: string) => {
   try {
     const timeEntryRef = doc(db, 'timeEntries', timeEntryId);
