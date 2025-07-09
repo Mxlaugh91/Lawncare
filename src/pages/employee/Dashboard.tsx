@@ -208,7 +208,11 @@ const EmployeeDashboard = () => {
                     const statusBadge = getStatusBadge(location);
                     
                     return (
-                      <div key={location.id} className="rounded-md border p-4 transition-all hover:bg-muted">
+                      <div 
+                        key={location.id} 
+                        className="rounded-md border p-4 transition-all hover:bg-muted cursor-pointer"
+                        onClick={() => handleLocationClick(location)}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center mb-1">
@@ -225,10 +229,7 @@ const EmployeeDashboard = () => {
                               )}
                             </div>
                           </div>
-                          <div 
-                            className="flex items-center ml-2 cursor-pointer hover:bg-muted-foreground/10 p-2 rounded-md transition-colors"
-                            onClick={() => handleLocationClick(location)}
-                          >
+                          <div className="flex items-center ml-2">
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
