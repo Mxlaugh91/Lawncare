@@ -17,6 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 const locationSchema = z.object({
   name: z.string().min(1, 'Navn må fylles ut'),
   address: z.string().min(1, 'Adresse må fylles ut'),
+  description: z.string().optional(),
+  imageUrl: z.string().url('Ugyldig URL').optional().or(z.literal('')),
+  recommendedEquipment: z.string().optional(),
   maintenanceFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
   edgeCuttingFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
   startWeek: z.coerce.number().min(1, 'Oppstartsuke må være mellom 1 og 52').max(52, 'Oppstartsuke må være mellom 1 og 52'),
@@ -67,6 +70,9 @@ export const LocationFormDialog = ({
         reset({
           name: '',
           address: '',
+          description: '',
+          imageUrl: '',
+          recommendedEquipment: '',
           maintenanceFrequency: 2,
           edgeCuttingFrequency: 4,
           startWeek: 18,
@@ -77,6 +83,9 @@ export const LocationFormDialog = ({
         reset({
           name: initialData.name || '',
           address: initialData.address || '',
+          description: initialData.description || '',
+          imageUrl: initialData.imageUrl || '',
+          recommendedEquipment: initialData.recommendedEquipment || '',
           maintenanceFrequency: initialData.maintenanceFrequency || 2,
           edgeCuttingFrequency: initialData.edgeCuttingFrequency || 4,
           startWeek: initialData.startWeek || 18,
@@ -137,6 +146,44 @@ export const LocationFormDialog = ({
               />
               {errors.address && (
                 <p className="text-sm text-destructive mt-1">{errors.address.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="description">Beskrivelse</Label>
+              <Textarea
+                id="description"
+                {...register('description')}
+                placeholder="Kort beskrivelse av stedet"
+                className="h-20"
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="imageUrl">Bilde URL</Label>
+              <Input
+                id="imageUrl"
+                {...register('imageUrl')}
+                placeholder="https://example.com/image.jpg"
+              />
+              {errors.imageUrl && (
+                <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="recommendedEquipment">Anbefalt utstyr</Label>
+              <Textarea
+                id="recommendedEquipment"
+                {...register('recommendedEquipment')}
+                placeholder="F.eks. Stor sitteklipper, mindre håndklipper for kantklipping, løvblåser"
+                className="h-20"
+              />
+              {errors.recommendedEquipment && (
+                <p className="text-sm text-destructive mt-1">{errors.recommendedEquipment.message}</p>
               )}
             </div>
 

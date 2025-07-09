@@ -6,6 +6,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { LocationDetailModal } from '@/components/LocationDetailModal';
 import { 
   Clock, 
   MapPin, 
@@ -13,7 +14,7 @@ import {
   AlertCircle,
   ChevronRight
 } from 'lucide-react';
-import { LocationWithStatus, Mower, ServiceInterval } from '@/types';
+import { LocationWithStatus, Mower, ServiceInterval, Location } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
@@ -57,6 +58,8 @@ const EmployeeDashboard = () => {
     mower: Mower;
     intervals: ServiceInterval[];
   }>>([]);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   const currentWeek = getISOWeekNumber(new Date());
 
@@ -144,6 +147,16 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const handleLocationClick = (location: LocationWithStatus) => {
+    setSelectedLocation(location);
+    setIsLocationModalOpen(true);
+  };
+
+  const handleCloseLocationModal = () => {
+    setIsLocationModalOpen(false);
+    setSelectedLocation(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -212,7 +225,10 @@ const EmployeeDashboard = () => {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center ml-2">
+                          <div 
+                            className="flex items-center ml-2 cursor-pointer hover:bg-muted-foreground/10 p-2 rounded-md transition-colors"
+                            onClick={() => handleLocationClick(location)}
+                          >
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
@@ -307,6 +323,13 @@ const EmployeeDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Location Detail Modal */}
+      <LocationDetailModal
+        isOpen={isLocationModalOpen}
+        onClose={handleCloseLocationModal}
+        location={selectedLocation}
+      />
     </div>
   );
 };

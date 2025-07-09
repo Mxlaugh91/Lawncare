@@ -13,6 +13,9 @@ export interface Location {
   id: string;
   name: string;
   address: string;
+  description?: string;
+  imageUrl?: string;
+  recommendedEquipment?: string;
   maintenanceFrequency: number; // in weeks
   edgeCuttingFrequency: number; // in weeks
   startWeek: number;
