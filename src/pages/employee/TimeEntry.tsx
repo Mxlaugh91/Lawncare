@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,6 +45,7 @@ type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
 const TimeEntry = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [mowers, setMowers] = useState<Mower[]>([]);
@@ -57,6 +59,19 @@ const TimeEntry = () => {
   
   const currentWeek = getISOWeekNumber(new Date());
   const weekDates = getISOWeekDates(currentWeek);
+
+  const timeEntrySchema = z.object({
+    locationId: z.string({
+      required_error: t('timeEntry.locationRequired'),
+    }),
+    hours: z.coerce.number({
+      required_error: t('timeEntry.hoursRequired'),
+    }).min(0.1, t('timeEntry.hoursMinimum')),
+    mowerId: z.string().nullable(),
+    edgeCuttingDone: z.boolean().default(false),
+    notes: z.string().optional(),
+    taggedEmployeeIds: z.array(z.string()).optional(),
+  });
 
   const {
     register,
@@ -123,8 +138,8 @@ const TimeEntry = () => {
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
-          title: 'Feil',
-          description: 'Kunne ikke hente nødvendig data. Prøv igjen senere.',
+          title: t('common.error'),
+          description: t('errors.couldNotFetchData'),
           variant: 'destructive',
         });
       } finally {
@@ -191,8 +206,8 @@ const TimeEntry = () => {
   const onSubmit = async (data: TimeEntryFormValues) => {
     if (!currentUser) {
       toast({
-        title: 'Feil',
-        description: 'Du må være logget inn for å registrere timer',
+        title: t('common.error'),
+        description: t('timeEntry.mustBeLoggedIn'),
         variant: 'destructive',
       });
       return;
@@ -231,8 +246,11 @@ const TimeEntry = () => {
       }
       
       toast({
-        title: '🎉 Timer registrert!',
-        description: `${selectedHours} timer registrert for ${selectedLocation?.name}`,
+        title: t('timeEntry.timeRegistered'),
+        description: t('timeEntry.timeRegisteredDescription', { 
+          hours: selectedHours, 
+          location: selectedLocation?.name 
+        }),
       });
       
       reset();
@@ -245,8 +263,8 @@ const TimeEntry = () => {
     } catch (error) {
       console.error('Error submitting time entry:', error);
       toast({
-        title: 'Feil',
-        description: 'Kunne ikke lagre timeregistrering. Prøv igjen senere.',
+        title: t('common.error'),
+        description: t('errors.couldNotSaveData'),
         variant: 'destructive',
       });
     }

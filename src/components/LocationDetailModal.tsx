@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
   lastMaintenanceEmployeeName,
   lastEdgeCuttingEmployeeName,
 }) => {
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   if (!location) return null;
@@ -50,14 +52,14 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
     try {
       await navigator.clipboard.writeText(location.address);
       toast({
-        title: 'Adresse kopiert',
-        description: 'Adressen er kopiert til utklippstavlen',
+        title: t('locations.addressCopied'),
+        description: t('locations.addressCopiedDescription'),
       });
     } catch (error) {
       console.error('Failed to copy address:', error);
       toast({
-        title: 'Feil',
-        description: 'Kunne ikke kopiere adresse',
+        title: t('common.error'),
+        description: t('errors.generic'),
         variant: 'destructive',
       });
     }
@@ -84,7 +86,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <DialogTitle className="text-xl font-semibold">
-              Stedsdetaljer
+              {t('locations.locationDetails')}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -108,8 +110,8 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center">
                     <MapPin className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                    <p className="text-green-700 font-medium">Ingen bilde tilgjengelig</p>
-                    <p className="text-green-600 text-sm">Bilde kan legges til av administrator</p>
+                    <p className="text-green-700 font-medium">{t('locations.noImageAvailable')}</p>
+                    <p className="text-green-600 text-sm">{t('locations.imageCanBeAdded')}</p>
                   </div>
                 </div>
               )}
@@ -128,7 +130,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
               <div className="bg-muted/30 rounded-lg p-4">
                 <h3 className="font-semibold mb-2 flex items-center">
                   <FileText className="h-4 w-4 mr-2 text-primary" />
-                  Beskrivelse
+                  {t('locations.description')}
                 </h3>
                 <p className="text-muted-foreground">{location.description}</p>
               </div>
@@ -140,14 +142,14 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
               <div className="space-y-4">
                 <h3 className="font-semibold flex items-center">
                   <MapPin className="h-4 w-4 mr-2 text-primary" />
-                  Adresse
+                  {t('common.address')}
                 </h3>
                 <div className="bg-card border rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="font-medium">{location.address}</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Klikk for å kopiere eller åpne i kart
+                        {t('locations.clickToCopyOrOpenMaps')}
                       </p>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
@@ -164,7 +166,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Kopier adresse</p>
+                            <p>{t('locations.copyAddress')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -181,7 +183,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Åpne i Google Maps</p>
+                            <p>{t('locations.openInMaps')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -194,23 +196,23 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
               <div className="space-y-4">
                 <h3 className="font-semibold flex items-center">
                   <Calendar className="h-4 w-4 mr-2 text-primary" />
-                  Vedlikeholdsplan
+                  {t('locations.maintenancePlan')}
                 </h3>
                 <div className="bg-card border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Gressklipping</span>
-                    <Badge variant="outline">Hver {location.maintenanceFrequency}. uke</Badge>
+                    <span className="text-sm text-muted-foreground">{t('operations.grassCutting')}</span>
+                    <Badge variant="outline">{t('locations.everyNWeeks', { n: location.maintenanceFrequency })}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground flex items-center">
                       <Scissors className="h-3 w-3 mr-1" />
-                      Kantklipping
+                      {t('operations.edgeCutting')}
                     </span>
-                    <Badge variant="outline">Hver {location.edgeCuttingFrequency}. uke</Badge>
+                    <Badge variant="outline">{t('locations.everyNWeeks', { n: location.edgeCuttingFrequency })}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Oppstartsuke</span>
-                    <Badge variant="secondary">Uke {location.startWeek}</Badge>
+                    <span className="text-sm text-muted-foreground">{t('locations.startWeek')}</span>
+                    <Badge variant="secondary">{t('common.week')} {location.startWeek}</Badge>
                   </div>
                 </div>
               </div>
@@ -222,7 +224,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center">
                 <Wrench className="h-4 w-4 mr-2 text-primary" />
-                Anbefalt utstyr
+                {t('locations.recommendedEquipment')}
               </h3>
               <div className="bg-card border rounded-lg p-4">
                 {location.recommendedEquipment ? (
@@ -238,10 +240,10 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                   <div className="text-center py-4">
                     <Wrench className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-muted-foreground text-sm">
-                      Ingen spesifikt utstyr anbefalt
+                      {t('locations.noSpecificEquipment')}
                     </p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      Administrator kan legge til anbefalinger
+                      {t('locations.adminCanAddRecommendations')}
                     </p>
                   </div>
                 )}
@@ -252,7 +254,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center">
                 <FileText className="h-4 w-4 mr-2 text-primary" />
-                Notater og instrukser
+                {t('locations.notesAndInstructions')}
               </h3>
               <div className="bg-card border rounded-lg p-4">
                 {location.notes ? (
@@ -263,10 +265,10 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                   <div className="text-center py-4">
                     <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-muted-foreground text-sm">
-                      Ingen spesielle notater registrert
+                      {t('locations.noSpecialNotes')}
                     </p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      Administrator kan legge til instrukser og merknader
+                      {t('locations.adminCanAddInstructions')}
                     </p>
                   </div>
                 )}
@@ -279,14 +281,14 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
               <div className="space-y-3 text-sm">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Sist klippet:</span>
+                    <span className="text-muted-foreground">{t('locations.lastMaintenance')}:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {location.lastMaintenanceWeek ? `Uke ${location.lastMaintenanceWeek}` : 'Ikke registrert'}
+                        {location.lastMaintenanceWeek ? `${t('common.week')} ${location.lastMaintenanceWeek}` : t('locations.notRegistered')}
                       </div>
                       {lastMaintenanceEmployeeName && (
                         <div className="text-xs text-muted-foreground">
-                          av {lastMaintenanceEmployeeName}
+                          {t('common.by')} {lastMaintenanceEmployeeName}
                         </div>
                       )}
                     </div>
@@ -294,14 +296,14 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Sist kantklippet:</span>
+                    <span className="text-muted-foreground">{t('locations.lastEdgeCutting')}:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {location.lastEdgeCuttingWeek ? `Uke ${location.lastEdgeCuttingWeek}` : 'Ikke registrert'}
+                        {location.lastEdgeCuttingWeek ? `${t('common.week')} ${location.lastEdgeCuttingWeek}` : t('locations.notRegistered')}
                       </div>
                       {lastEdgeCuttingEmployeeName && (
                         <div className="text-xs text-muted-foreground">
-                          av {lastEdgeCuttingEmployeeName}
+                          {t('common.by')} {lastEdgeCuttingEmployeeName}
                         </div>
                       )}
                     </div>

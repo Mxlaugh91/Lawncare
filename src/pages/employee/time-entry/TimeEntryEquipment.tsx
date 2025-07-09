@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Wrench, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,8 @@ export const TimeEntryEquipment = React.memo(({
   onOpenChange, 
   onMowerChange 
 }: TimeEntryEquipmentProps) => {
+  const { t } = useTranslation();
+
   const handleMowerChange = React.useCallback((value: string) => {
     onMowerChange(value === 'none' ? '' : value);
   }, [onMowerChange]);
@@ -34,10 +37,10 @@ export const TimeEntryEquipment = React.memo(({
                   <Wrench className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span>Utstyr brukt</span>
-                  <span className="text-xs text-muted-foreground font-normal">Hvilken gressklipper ble brukt?</span>
+                  <span>{t('timeEntry.equipment')}</span>
+                  <span className="text-xs text-muted-foreground font-normal">{t('timeEntry.equipmentDescription')}</span>
                 </div>
-                <Badge variant="outline" className="ml-3">Valgfritt</Badge>
+                <Badge variant="outline" className="ml-3">{t('timeEntry.optional')}</Badge>
               </div>
               <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-muted-foreground ${isOpen ? 'rotate-180' : ''}`} />
             </CardTitle>
@@ -47,11 +50,11 @@ export const TimeEntryEquipment = React.memo(({
           <CardContent>
             <Select onValueChange={handleMowerChange}>
               <SelectTrigger className="h-12 border-2 hover:border-primary/50 transition-colors">
-                <SelectValue placeholder="🚜 Velg gressklipper" />
+                <SelectValue placeholder={t('timeEntry.selectMower')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none" className="py-3">
-                  <span className="text-muted-foreground">Ingen gressklipper brukt</span>
+                  <span className="text-muted-foreground">{t('timeEntry.noMowerUsed')}</span>
                 </SelectItem>
                 {mowers.map((mower) => (
                   <SelectItem key={mower.id} value={mower.id} className="py-3">

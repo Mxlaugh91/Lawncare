@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -19,16 +20,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import * as timeEntryService from '@/services/timeEntryService';
 import * as notificationService from '@/services/notificationService';
-
-const timeEntrySchema = z.object({
-  hours: z.coerce.number({
-    required_error: 'Tidsbruk må fylles ut',
-  }).min(0.1, 'Tidsbruk må være større enn 0'),
-  edgeCuttingDone: z.boolean().default(false),
-  notes: z.string().optional(),
-});
-
-type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
 
 interface TimeEntryDialogProps {
   isOpen: boolean;
@@ -49,7 +40,18 @@ export function TimeEntryDialog({
 }: TimeEntryDialogProps) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+
+  const timeEntrySchema = z.object({
+    hours: z.coerce.number({
+      required_error: t('timeEntry.hoursRequired'),
+    }).min(0.1, t('timeEntry.hoursMinimum')),
+    edgeCuttingDone: z.boolean().default(false),
+    notes: z.string().optional(),
+  });
+
+  type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
 
   const {
     register,
@@ -86,8 +88,8 @@ export function TimeEntryDialog({
       await notificationService.markNotificationAsRead(notificationId);
 
       toast({
-        title: 'Timer registrert',
-        description: `Timer ble registrert for ${locationName}`,
+        title: t('timeEntry.timeRegistered'),
+        description: t('timeEntry.timeRegisteredFor', { location: locationName }),
       });
 
       reset();
@@ -95,8 +97,8 @@ export function TimeEntryDialog({
     } catch (error) {
       console.error('Error submitting time entry:', error);
       toast({
-        title: 'Feil',
-        description: 'Kunne ikke registrere timer. Prøv igjen senere.',
+        title: t('common.error'),
+        description: t('errors.couldNotSaveData'),
         variant: 'destructive',
       });
     } finally {
@@ -108,15 +110,15 @@ export function TimeEntryDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Registrer timer for {locationName}</DialogTitle>
+          <DialogTitle>{t('timeEntry.registerHoursFor', { location: locationName })}</DialogTitle>
           <DialogDescription>
-            Du har blitt tagget i en jobb. Registrer dine timer her.
+            {t('timeEntry.youHaveBeenTagged')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="hours">Tidsbruk (timer) *</Label>
+            <Label htmlFor="hours">{t('timeEntry.timeUsedRequired')}</Label>
             <Input
               id="hours"
               type="number"
@@ -135,14 +137,14 @@ export function TimeEntryDialog({
               id="edgeCuttingDone"
               {...register('edgeCuttingDone')}
             />
-            <Label htmlFor="edgeCuttingDone">Kantklipping utført</Label>
+            <Label htmlFor="edgeCuttingDone">{t('timeEntry.edgeCutting')}</Label>
           </div>
 
           <div>
-            <Label htmlFor="notes">Notater</Label>
+            <Label htmlFor="notes">{t('common.notes')}</Label>
             <Textarea
               id="notes"
-              placeholder="Skriv eventuelle merknader her"
+              placeholder={t('timeEntry.notesPlaceholder')}
               {...register('notes')}
             />
           </div>
@@ -153,10 +155,10 @@ export function TimeEntryDialog({
               variant="outline"
               onClick={onClose}
             >
-              Avbryt
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Lagrer...' : 'Registrer timer'}
+              {loading ? t('common.saving') : t('notifications.registerHours')}
             </Button>
           </div>
         </form>

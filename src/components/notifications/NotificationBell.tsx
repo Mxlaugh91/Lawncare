@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,7 @@ import { TimeEntryDialog } from './TimeEntryDialog';
 
 export function NotificationBell() {
   const { currentUser } = useAuth();
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
@@ -95,7 +97,7 @@ export function NotificationBell() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80">
           <div className="flex items-center justify-between px-4 py-2 border-b">
-            <span className="font-medium">Varsler</span>
+            <span className="font-medium">{t('notifications.title')}</span>
             {notifications.length > 0 && (
               <Button 
                 variant="ghost" 
@@ -103,14 +105,14 @@ export function NotificationBell() {
                 onClick={handleMarkAllAsRead}
                 className="text-xs hover:text-primary"
               >
-                Marker alle som lest
+                {t('notifications.markAllAsRead')}
               </Button>
             )}
           </div>
           <ScrollArea className="h-[300px]">
             {notifications.length === 0 ? (
               <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
-                Ingen nye varsler
+                {t('notifications.noNewNotifications')}
               </div>
             ) : (
               notifications.map((notification) => (

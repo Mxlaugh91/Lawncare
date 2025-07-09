@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -52,6 +53,7 @@ const getStatusBadge = (location: LocationWithStatus) => {
 const EmployeeDashboard = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [locationsForCurrentWeek, setLocationsForCurrentWeek] = useState<LocationWithStatus[]>([]);
   const [mowersNeedingService, setMowersNeedingService] = useState<Array<{
@@ -136,14 +138,14 @@ const EmployeeDashboard = () => {
       })));
       
       toast({
-        title: 'Suksess',
-        description: 'Serviceintervall ble nullstilt',
+        title: t('common.success'),
+        description: t('equipment.serviceIntervalReset'),
       });
     } catch (error) {
       console.error('Error resetting service interval:', error);
       toast({
-        title: 'Feil',
-        description: 'Kunne ikke nullstille serviceintervall. Prøv igjen senere.',
+        title: t('common.error'),
+        description: t('errors.couldNotSaveData'),
         variant: 'destructive',
       });
     }
@@ -182,12 +184,12 @@ const EmployeeDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Oversikt</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('navigation.dashboard')}</h1>
         <div className="flex space-x-2">
           <Button asChild>
             <Link to="/employee/timeregistrering">
               <Clock className="mr-2 h-4 w-4" />
-              Registrer timer
+              {t('timeEntry.title')}
             </Link>
           </Button>
         </div>
@@ -196,9 +198,9 @@ const EmployeeDashboard = () => {
       {mowersNeedingService.length > 0 && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800">Utstyr trenger vedlikehold</AlertTitle>
+          <AlertTitle className="text-amber-800">{t('equipment.equipmentNeedsMaintenance')}</AlertTitle>
           <AlertDescription className="text-amber-700">
-            {mowersNeedingService.length} gressklipper(e) trenger service. Sjekk listen nedenfor.
+            {t('equipment.mowersNeedService', { count: mowersNeedingService.length })}
           </AlertDescription>
         </Alert>
       )}
@@ -208,10 +210,10 @@ const EmployeeDashboard = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <MapPin className="mr-2 h-5 w-5 text-primary" />
-              Ukens oppgaver
+              {t('dashboard.weeklyTasks')}
             </CardTitle>
             <CardDescription>
-              Uke {currentWeek} - Alle oppgaver for denne uken
+              {t('common.week')} {currentWeek} - {t('dashboard.allTasksThisWeek')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -263,9 +265,9 @@ const EmployeeDashboard = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-[200px] text-center p-4">
                 <CheckCircle2 className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-lg font-medium">Ingen oppgaver denne uken!</h3>
+                <h3 className="text-lg font-medium">{t('dashboard.noTasksThisWeek')}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Det er ingen steder som trenger klipping for øyeblikket.
+                  {t('dashboard.noLocationsMaintenance')}
                 </p>
               </div>
             )}
@@ -273,7 +275,7 @@ const EmployeeDashboard = () => {
           <CardFooter className="border-t pt-4">
             <Button variant="outline" className="w-full" asChild>
               <Link to="/employee/timeregistrering">
-                Registrer Timer
+                {t('timeEntry.title')}
               </Link>
             </Button>
           </CardFooter>
@@ -283,10 +285,10 @@ const EmployeeDashboard = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <AlertCircle className="mr-2 h-5 w-5 text-amber-600" />
-              Servicevarsler
+              {t('equipment.serviceAlerts')}
             </CardTitle>
             <CardDescription>
-              Utstyr som trenger vedlikehold
+              {t('equipment.equipmentNeedsMaintenance')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -316,8 +318,8 @@ const EmployeeDashboard = () => {
                             <div>
                               <p className="text-sm font-medium">{interval.description}</p>
                               <p className="text-xs text-muted-foreground">
-                                Intervall: {interval.hourInterval} timer • 
-                                Overtid: {item.mower.totalHours - (interval.lastResetHours || 0) - interval.hourInterval} timer
+                                {t('equipment.interval')}: {interval.hourInterval} {t('common.hours')} • 
+                                {t('equipment.overtime')}: {item.mower.totalHours - (interval.lastResetHours || 0) - interval.hourInterval} {t('common.hours')}
                               </p>
                             </div>
                             <Button 
@@ -325,7 +327,7 @@ const EmployeeDashboard = () => {
                               variant="outline"
                               onClick={() => handleServiceReset(item.mower.id, interval.id)}
                             >
-                              Nullstill
+                              {t('equipment.reset')}
                             </Button>
                           </div>
                         ))}
@@ -337,9 +339,9 @@ const EmployeeDashboard = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-[200px] text-center p-4">
                 <CheckCircle2 className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-lg font-medium">Alt utstyr er vedlikeholdt!</h3>
+                <h3 className="text-lg font-medium">{t('equipment.allEquipmentMaintained')}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Det er ingen gressklippere som trenger service for øyeblikket.
+                  {t('equipment.noMowersNeedService')}
                 </p>
               </div>
             )}

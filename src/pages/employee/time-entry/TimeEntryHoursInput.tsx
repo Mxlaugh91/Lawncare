@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Clock, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ export const TimeEntryHoursInput = React.memo(({
   register, 
   errors 
 }: TimeEntryHoursInputProps) => {
+  const { t } = useTranslation();
+
   return (
     <Card className="card-hover">
       <CardHeader className="pb-4">
@@ -28,12 +31,12 @@ export const TimeEntryHoursInput = React.memo(({
           <div className="p-2 rounded-full bg-primary/10 mr-3">
             <Clock className="h-5 w-5 text-primary" />
           </div>
-          Tidsbruk
+          {t('timeEntry.timeUsed')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          <Label htmlFor="hours" className="text-base font-medium">Timer brukt *</Label>
+          <Label htmlFor="hours" className="text-base font-medium">{t('timeEntry.timeUsedRequired')}</Label>
           
           {/* Quick hour buttons */}
           <div className="grid grid-cols-5 gap-2 mb-4">
@@ -60,7 +63,7 @@ export const TimeEntryHoursInput = React.memo(({
             type="number"
             step="0.25"
             min="0.25"
-            placeholder="Eller skriv inn timer..."
+            placeholder={t('timeEntry.timeUsedPlaceholder')}
             className="h-14 text-lg border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
             {...register('hours')}
           />

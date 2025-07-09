@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,8 @@ export const TimeEntryNotes = React.memo(({
   onOpenChange, 
   register 
 }: TimeEntryNotesProps) => {
+  const { t } = useTranslation();
+
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange}>
       <Card className="card-hover">
@@ -28,10 +31,10 @@ export const TimeEntryNotes = React.memo(({
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span>Notater</span>
-                  <span className="text-xs text-muted-foreground font-normal">Legg til merknader om jobben</span>
+                  <span>{t('timeEntry.notesTitle')}</span>
+                  <span className="text-xs text-muted-foreground font-normal">{t('timeEntry.notesDescription')}</span>
                 </div>
-                <Badge variant="outline" className="ml-3">Valgfritt</Badge>
+                <Badge variant="outline" className="ml-3">{t('timeEntry.optional')}</Badge>
               </div>
               <ChevronDown className={`h-5 w-5 transition-transform duration-300 text-muted-foreground ${isOpen ? 'rotate-180' : ''}`} />
             </CardTitle>
@@ -40,7 +43,7 @@ export const TimeEntryNotes = React.memo(({
         <CollapsibleContent>
           <CardContent>
             <Textarea
-              placeholder="💭 Skriv eventuelle merknader om jobben her..."
+              placeholder={t('timeEntry.notesPlaceholder')}
               className="min-h-[100px] resize-none border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
               {...register('notes')}
             />
