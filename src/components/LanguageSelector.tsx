@@ -42,7 +42,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm mx-4">
+      <DialogContent className="max-w-sm mx-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Globe className="mr-2 h-5 w-5 text-primary" />
