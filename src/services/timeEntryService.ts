@@ -296,10 +296,10 @@ export const getLatestTimeEntryForLocationAndType = async (locationId: string, i
       ...querySnapshot.docs[0].data()
     } as TimeEntry;
     
-    // Get employee name if not already present
-    if (!timeEntry.employeeName && timeEntry.employeeId) {
+    // Always fetch the current employee name from the users collection
+    if (timeEntry.employeeId) {
       const employee = await userService.getUserById(timeEntry.employeeId);
-      timeEntry.employeeName = employee?.name || 'Unknown Employee';
+      timeEntry.employeeName = employee?.name || 'Ukjent ansatt';
     }
     
     return timeEntry;
