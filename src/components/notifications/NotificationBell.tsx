@@ -21,18 +21,18 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!currentUser) return;
-      
-      try {
-        const unreadNotifications = await notificationService.getUnreadNotifications(currentUser.uid);
-        setNotifications(unreadNotifications);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      }
-    };
+  const fetchNotifications = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const unreadNotifications = await notificationService.getUnreadNotifications(currentUser.uid);
+      setNotifications(unreadNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
 
+  useEffect(() => {
     fetchNotifications();
   }, [currentUser]);
 
@@ -67,6 +67,8 @@ export function NotificationBell() {
   const handleCloseDialog = () => {
     setSelectedNotification(null);
     setIsOpen(false);
+    // Refresh notifications after closing the dialog
+    fetchNotifications();
   };
 
   const formatNotificationTime = (date: Date) => {
@@ -141,6 +143,7 @@ export function NotificationBell() {
         <TimeEntryDialog
           isOpen={true}
           onClose={handleCloseDialog}
+          onSuccess={fetchNotifications}
           notificationId={selectedNotification.id}
           locationId={selectedNotification.data.locationId!}
           locationName={selectedNotification.data.locationName!}

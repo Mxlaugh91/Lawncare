@@ -24,6 +24,7 @@ import * as notificationService from '@/services/notificationService';
 interface TimeEntryDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   notificationId: string;
   locationId: string;
   locationName: string;
@@ -33,6 +34,7 @@ interface TimeEntryDialogProps {
 export function TimeEntryDialog({
   isOpen,
   onClose,
+  onSuccess,
   notificationId,
   locationId,
   locationName,
@@ -93,6 +95,12 @@ export function TimeEntryDialog({
       });
 
       reset();
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       onClose();
     } catch (error) {
       console.error('Error submitting time entry:', error);
