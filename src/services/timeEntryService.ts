@@ -163,7 +163,7 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     // Enrich time entries with employee names
     const enrichedTimeEntries = timeEntries.map(entry => ({
       ...entry,
-      employeeName: usersById.get(entry.employeeId)?.name || 'Unknown Employee'
+      employeeName: usersById.get(entry.employeeId)?.name || 'Ukjent ansatt'
     }));
 
     return enrichedTimeEntries;
