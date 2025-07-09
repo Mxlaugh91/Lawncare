@@ -163,7 +163,7 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     // Enrich time entries with employee names
     const enrichedTimeEntries = timeEntries.map(entry => ({
       ...entry,
-      employeeName: usersById.get(entry.employeeId)?.name || 'Unknown Employee'
+      employeeName: usersById.get(entry.employeeId)?.name || 'Ukjent ansatt'
     }));
 
     return enrichedTimeEntries;
@@ -263,6 +263,49 @@ export const getRecentTimeEntries = async (count: number = 5) => {
   } catch (error) {
     console.error('Error in getRecentTimeEntries:', error);
     throw new Error('Could not get recent time entries');
+  }
+};
+
+export const getLatestTimeEntryForLocationAndType = async (locationId: string, isEdgeCutting: boolean = false) => {
+  try {
+    let q = query(
+      collection(db, 'timeEntries'),
+      where('locationId', '==', locationId),
+      orderBy('date', 'desc'),
+      limit(1)
+    );
+
+    if (isEdgeCutting) {
+      q = query(
+        collection(db, 'timeEntries'),
+        where('locationId', '==', locationId),
+        where('edgeCuttingDone', '==', true),
+        orderBy('date', 'desc'),
+        limit(1)
+      );
+    }
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const timeEntry = {
+      id: querySnapshot.docs[0].id,
+      ...querySnapshot.docs[0].data()
+    } as TimeEntry;
+    
+    // Always fetch the current employee name from the users collection
+    if (timeEntry.employeeId) {
+      const employee = await userService.getUserById(timeEntry.employeeId);
+      timeEntry.employeeName = employee?.name || 'Ukjent ansatt';
+    }
+    
+    return timeEntry;
+  } catch (error) {
+    console.error('Error in getLatestTimeEntryForLocationAndType:', error);
+    throw new Error('Could not get latest time entry');
   }
 };
 

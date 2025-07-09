@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Scissors, Zap, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,8 @@ export const TimeEntryEdgeCutting = React.memo(({
   edgeCuttingNeeded, 
   onEdgeCuttingChange 
 }: TimeEntryEdgeCuttingProps) => {
+  const { t } = useTranslation();
+
   const handleChange = React.useCallback((checked: boolean) => {
     onEdgeCuttingChange(checked);
     if ('vibrate' in navigator) {
@@ -31,18 +34,18 @@ export const TimeEntryEdgeCutting = React.memo(({
               <div className="p-2 rounded-full bg-amber-100 mr-3">
                 <Scissors className="h-5 w-5 text-amber-600" />
               </div>
-              Kantklipping utført
+              {t('timeEntry.edgeCutting')}
             </Label>
             {edgeCuttingNeeded && !edgeCuttingDone && (
               <p className="text-sm text-amber-700 flex items-center mt-2 ml-11 animate-pulse">
                 <Zap className="mr-1 h-3 w-3" />
-                Anbefales for dette stedet
+                {t('timeEntry.edgeCuttingRecommended')}
               </p>
             )}
             {edgeCuttingDone && (
               <p className="text-sm text-primary flex items-center mt-2 ml-11">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
-                Kantklipping registrert
+                {t('timeEntry.edgeCuttingRegistered')}
               </p>
             )}
           </div>

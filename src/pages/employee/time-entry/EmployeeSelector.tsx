@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,6 +22,7 @@ export const EmployeeSelector = React.memo(({
   isOpen = false,
   onOpenChange 
 }: EmployeeSelectorProps) => {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = React.useState(isOpen);
   const open = onOpenChange ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
@@ -48,8 +50,8 @@ export const EmployeeSelector = React.memo(({
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span>Andre på jobb</span>
-                  <span className="text-xs text-muted-foreground font-normal">Tagger kollegaer som var med</span>
+                  <span>{t('timeEntry.teamMembers')}</span>
+                  <span className="text-xs text-muted-foreground font-normal">{t('timeEntry.teamMembersDescription')}</span>
                 </div>
                 <Badge 
                   variant={selectedEmployees.length > 0 ? "default" : "outline"} 
@@ -62,10 +64,10 @@ export const EmployeeSelector = React.memo(({
                   {selectedEmployees.length > 0 ? (
                     <>
                       <UserPlus className="h-3 w-3 mr-1" />
-                      {selectedEmployees.length} valgt
+                      {selectedEmployees.length} {t('timeEntry.selected')}
                     </>
                   ) : (
-                    'Valgfritt'
+                    t('timeEntry.optional')
                   )}
                 </Badge>
               </div>
@@ -77,7 +79,7 @@ export const EmployeeSelector = React.memo(({
           <CardContent className="pt-0">
             <div className="space-y-2">
               <div className="text-xs text-muted-foreground mb-3 p-2 bg-muted/50 rounded-lg">
-                👥 Velg kollegaer som jobbet sammen med deg på denne oppgaven
+                👥 {t('timeEntry.selectColleagues')}
               </div>
               {employees.map((employee, index) => {
                 const isSelected = selectedEmployees.includes(employee.id);
@@ -146,7 +148,7 @@ export const EmployeeSelector = React.memo(({
               {selectedEmployees.length > 0 && (
                 <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg animate-in slide-in-from-bottom-2 duration-300">
                   <p className="text-sm text-primary font-medium">
-                    ✅ {selectedEmployees.length} kollegaer vil bli varslet om denne jobben
+                    {t('timeEntry.taggedEmployeesNotification', { count: selectedEmployees.length })}
                   </p>
                 </div>
               )}

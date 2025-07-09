@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +12,8 @@ export const TimeEntrySubmitButton = React.memo(({
   isSubmitting, 
   onSubmit 
 }: TimeEntrySubmitButtonProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className="sticky bottom-4 z-10">
       <Button 
@@ -22,12 +25,12 @@ export const TimeEntrySubmitButton = React.memo(({
         {isSubmitting ? (
           <>
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
-            Lagrer timer...
+            {t('timeEntry.submitting')}
           </>
         ) : (
           <>
             <Save className="mr-3 h-5 w-5" />
-            Registrer og marker som fullført 🎯
+            {t('timeEntry.submitButton')}
           </>
         )}
       </Button>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 const EmployeeHistory = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [periodFilter, setPeriodFilter] = useState('this-week');
@@ -79,8 +81,8 @@ const EmployeeHistory = () => {
       } catch (error) {
         console.error('Error fetching time entries:', error);
         toast({
-          title: 'Feil',
-          description: 'Kunne ikke hente timeregistreringer. Prøv igjen senere.',
+          title: t('common.error'),
+          description: t('errors.couldNotFetchData'),
           variant: 'destructive',
         });
       } finally {
@@ -103,45 +105,45 @@ const EmployeeHistory = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Min historikk</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('history.title')}</h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total tidsbruk</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('history.totalTimeUsed')}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics.totalHours.toFixed(1)} timer</div>
+            <div className="text-2xl font-bold">{statistics.totalHours.toFixed(1)} {t('common.hours')}</div>
             <p className="text-xs text-muted-foreground">
-              i valgt periode
+              {t('history.totalTimeDescription')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Antall steder</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('history.numberOfLocations')}</CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statistics.totalLocations}</div>
             <p className="text-xs text-muted-foreground">
-              unike steder besøkt
+              {t('history.locationsDescription')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gjennomsnitt</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('history.average')}</CardTitle>
             <History className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics.averageTimePerLocation.toFixed(1)} timer</div>
+            <div className="text-2xl font-bold">{statistics.averageTimePerLocation.toFixed(1)} {t('common.hours')}</div>
             <p className="text-xs text-muted-foreground">
-              per sted
+              {t('history.averageDescription')}
             </p>
           </CardContent>
         </Card>
@@ -149,24 +151,24 @@ const EmployeeHistory = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Timeregistreringer</CardTitle>
+          <CardTitle>{t('history.timeEntries')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <Label htmlFor="period-filter">Periode</Label>
+            <Label htmlFor="period-filter">{t('history.period')}</Label>
             <Select
               value={periodFilter}
               onValueChange={setPeriodFilter}
             >
               <SelectTrigger id="period-filter" className="w-[200px]">
-                <SelectValue placeholder="Velg periode" />
+                <SelectValue placeholder={t('history.selectPeriod')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="today">I dag</SelectItem>
-                <SelectItem value="this-week">Denne uken</SelectItem>
-                <SelectItem value="last-week">Forrige uke</SelectItem>
-                <SelectItem value="this-month">Denne måneden</SelectItem>
-                <SelectItem value="last-month">Forrige måned</SelectItem>
+                <SelectItem value="today">{t('history.today')}</SelectItem>
+                <SelectItem value="this-week">{t('history.thisWeek')}</SelectItem>
+                <SelectItem value="last-week">{t('history.lastWeek')}</SelectItem>
+                <SelectItem value="this-month">{t('history.thisMonth')}</SelectItem>
+                <SelectItem value="last-month">{t('history.lastMonth')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -183,27 +185,27 @@ const EmployeeHistory = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Dato</TableHead>
-                  <TableHead>Timer</TableHead>
-                  <TableHead className="hidden md:table-cell">Kantklipping</TableHead>
-                  <TableHead className="hidden md:table-cell">Notater</TableHead>
-                  <TableHead className="text-right">Handlinger</TableHead>
+                  <TableHead>{t('common.date')}</TableHead>
+                  <TableHead>{t('common.hours')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('history.edgeCuttingDone')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('common.notes')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {timeEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>{formatDate(entry.date.toDate())}</TableCell>
-                    <TableCell>{entry.hours} timer</TableCell>
+                    <TableCell>{entry.hours} {t('common.hours')}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {entry.edgeCuttingDone ? 'Ja' : 'Nei'}
+                      {entry.edgeCuttingDone ? t('common.yes') : t('common.no')}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {entry.notes || '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
-                        Detaljer
+                        {t('common.details')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -213,7 +215,7 @@ const EmployeeHistory = () => {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                Ingen timeregistreringer funnet for valgt periode.
+                {t('history.noEntriesFound')}
               </p>
             </div>
           )}

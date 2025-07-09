@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,6 +25,8 @@ export const LocationSelector = React.memo(({
   error,
   currentWeek
 }: LocationSelectorProps) => {
+  const { t } = useTranslation();
+
   return (
     <Card className="card-hover">
       <CardHeader className="pb-3">
@@ -31,7 +34,7 @@ export const LocationSelector = React.memo(({
           <div className="p-2 rounded-full bg-primary/10 mr-3">
             <MapPin className="h-5 w-5 text-primary" />
           </div>
-          Velg sted
+          {t('timeEntry.selectLocation')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -40,7 +43,7 @@ export const LocationSelector = React.memo(({
           onValueChange={onLocationChange}
         >
           <SelectTrigger className="h-14 border-2 hover:border-primary/50 transition-colors focus:border-primary focus:ring-4 focus:ring-primary/10">
-            <SelectValue placeholder="👆 Trykk for å velge sted" />
+            <SelectValue placeholder={t('timeEntry.selectLocationPlaceholder')} />
           </SelectTrigger>
           <SelectContent className="border-2 shadow-xl">
             {locations.map((location) => (

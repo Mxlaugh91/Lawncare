@@ -140,6 +140,31 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
+            {location.description && (
+              <div>
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Beskrivelse</h4>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <p className="text-base">{location.description}</p>
+                </div>
+              </div>
+            )}
+
+            {location.imageUrl && (
+              <div>
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Bilde</h4>
+                <div className="relative w-full h-48 rounded-lg overflow-hidden bg-muted">
+                  <img
+                    src={location.imageUrl}
+                    alt={location.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <h4 className="font-medium text-sm text-muted-foreground mb-1">Navn</h4>
@@ -202,6 +227,22 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
                 <p className="text-base">Hver {location.edgeCuttingFrequency}. uke</p>
               </div>
             </div>
+
+            {location.recommendedEquipment && (
+              <div>
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Anbefalt utstyr</h4>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="space-y-1">
+                    {location.recommendedEquipment.split(',').map((equipment, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-sm">{equipment.trim()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {location.notes && (
               <div>
