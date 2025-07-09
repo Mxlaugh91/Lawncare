@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +18,7 @@ import { getISOWeekNumber } from '@/lib/utils';
 import { TimeEntry } from '@/types';
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -65,8 +67,8 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
-          title: 'Feil',
-          description: 'Kunne ikke hente dashboarddata. Prøv igjen senere.',
+          title: t('common.error'),
+          description: t('errors.couldNotFetchData'),
           variant: 'destructive',
         });
       } finally {
@@ -89,12 +91,12 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Oversiktspanel</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('dashboard.title')}</h1>
         <div className="flex space-x-2">
           <Button asChild>
             <Link to="/admin/steder/nytt">
               <MapPin className="mr-2 h-4 w-4" />
-              Legg til nytt sted
+              {t('dashboard.addNewLocation')}
             </Link>
           </Button>
         </div>
@@ -121,8 +123,8 @@ const AdminDashboard = () => {
                     <FileSpreadsheet className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Gjenstår</p>
-                    <p className="text-xs text-muted-foreground">Steder som ikke er fullført</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t('dashboard.remaining')}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.remainingDescription')}</p>
                   </div>
                 </div>
                 <div className="text-2xl font-bold">{stats.remainingLocations}</div>
@@ -138,8 +140,8 @@ const AdminDashboard = () => {
                     <CheckCircle2 className="h-4 w-4 text-green-700" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Fullført denne uken</p>
-                    <p className="text-xs text-muted-foreground">Steder fullført</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t('dashboard.completedThisWeek')}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.completedDescription')}</p>
                   </div>
                 </div>
                 <div className="text-2xl font-bold">{stats.completedThisWeek}</div>
@@ -155,8 +157,8 @@ const AdminDashboard = () => {
                     <MapPin className="h-4 w-4 text-blue-700" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Totalt aktive steder</p>
-                    <p className="text-xs text-muted-foreground">steder i systemet</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t('dashboard.totalActiveLocations')}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.totalDescription')}</p>
                   </div>
                 </div>
                 <div className="text-2xl font-bold">{stats.totalLocations}</div>
@@ -172,8 +174,8 @@ const AdminDashboard = () => {
                     <Users className="h-4 w-4 text-amber-700" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Aktive ansatte</p>
-                    <p className="text-xs text-muted-foreground">som har registrert timer denne uken</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t('dashboard.activeEmployees')}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.employeesDescription')}</p>
                   </div>
                 </div>
                 <div className="text-2xl font-bold">{stats.activeEmployees}</div>
@@ -186,7 +188,7 @@ const AdminDashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Nylig aktivitet</CardTitle>
+            <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -204,7 +206,7 @@ const AdminDashboard = () => {
             ) : recentActivity.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  Ingen nylig aktivitet
+                  {t('dashboard.noRecentActivity')}
                 </p>
               </div>
             ) : (
@@ -235,26 +237,26 @@ const AdminDashboard = () => {
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Snarveier</CardTitle>
+            <CardTitle>{t('dashboard.shortcuts')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <Button className="w-full justify-start" variant="outline" asChild>
                 <Link to="/admin/drift">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Klippeliste
+                  {t('navigation.operations')}
                 </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
                 <Link to="/admin/steder">
                   <MapPin className="mr-2 h-4 w-4" />
-                  Steder
+                  {t('navigation.locations')}
                 </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
                 <Link to="/admin/vedlikehold">
                   <Users className="mr-2 h-4 w-4" />
-                  Vedlikehold
+                  {t('navigation.equipment')}
                 </Link>
               </Button>
             </div>

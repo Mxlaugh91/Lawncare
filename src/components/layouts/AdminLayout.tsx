@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LayoutDashboard, FileSpreadsheet, Users, Archive, Settings, PenTool as Tool, Menu, X, LogOut, User
+  LayoutDashboard, FileSpreadsheet, Users, Archive, Settings, PenTool as Tool, Menu, X, LogOut, User, Globe
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -23,8 +25,10 @@ interface AdminLayoutProps {
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { currentUser, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLanguageSelectorOpen, setIsLanguageSelectorOpen] = useState(false);
 
   // Initialize Firebase messaging
   useFirebaseMessaging();
@@ -48,12 +52,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   };
 
   const menuItems = [
-    { to: '/admin', label: 'Oversikt', icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
-    { to: '/admin/drift', label: 'Klippeliste', icon: <FileSpreadsheet className="mr-2 h-4 w-4" /> },
-    { to: '/admin/ansatte', label: 'Ansatte', icon: <Users className="mr-2 h-4 w-4" /> },
-    { to: '/admin/arkiv', label: 'Arkiv', icon: <Archive className="mr-2 h-4 w-4" /> },
-    { to: '/admin/vedlikehold', label: 'Vedlikehold', icon: <Tool className="mr-2 h-4 w-4" /> },
-    { to: '/admin/innstillinger', label: 'Innstillinger', icon: <Settings className="mr-2 h-4 w-4" /> },
+    { to: '/admin', label: t('navigation.dashboard'), icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
+    { to: '/admin/drift', label: t('navigation.operations'), icon: <FileSpreadsheet className="mr-2 h-4 w-4" /> },
+    { to: '/admin/ansatte', label: t('navigation.employees'), icon: <Users className="mr-2 h-4 w-4" /> },
+    { to: '/admin/arkiv', label: t('navigation.archive'), icon: <Archive className="mr-2 h-4 w-4" /> },
+    { to: '/admin/vedlikehold', label: t('navigation.equipment'), icon: <Tool className="mr-2 h-4 w-4" /> },
+    { to: '/admin/innstillinger', label: t('navigation.settings'), icon: <Settings className="mr-2 h-4 w-4" /> },
   ];
 
   return (
@@ -98,6 +102,13 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
             {/* User Menu and Mobile Toggle */}
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsLanguageSelectorOpen(true)}
+              >
+                <Globe className="h-5 w-5" />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -112,7 +123,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                       <p className="text-sm font-medium leading-none">{currentUser?.email}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-                          Administrator
+                          {t('employees.administrator')}
                         </span>
                       </p>
                     </div>
@@ -121,12 +132,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                   <DropdownMenuItem asChild>
                     <NavLink to="/admin/innstillinger" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Innstillinger</span>
+                      <span>{t('navigation.settings')}</span>
                     </NavLink>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logg ut</span>
+                    <span>{t('auth.logout')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -178,6 +189,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           </div>
         </main>
       </div>
+      
+      <LanguageSelector
+        isOpen={isLanguageSelectorOpen}
+        onClose={() => setIsLanguageSelectorOpen(false)}
+      />
     </div>
   );
 };

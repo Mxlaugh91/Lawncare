@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +21,8 @@ import {
   Clock, 
   History, 
   LogOut,
-  User
+  User,
+  Globe
 } from 'lucide-react';
 
 interface EmployeeLayoutProps {
@@ -28,9 +31,11 @@ interface EmployeeLayoutProps {
 
 const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
   const { currentUser, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLanguageSelectorOpen, setIsLanguageSelectorOpen] = useState(false);
 
   // Initialize Firebase messaging
   useFirebaseMessaging();
@@ -50,9 +55,9 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
   };
 
   const menuItems = [
-    { to: '/employee', label: 'Oversikt', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { to: '/employee/timeregistrering', label: 'Timer', icon: <Clock className="h-5 w-5" /> },
-    { to: '/employee/historikk', label: 'Historikk', icon: <History className="h-5 w-5" /> },
+    { to: '/employee', label: t('navigation.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
+    { to: '/employee/timeregistrering', label: t('navigation.timeEntry'), icon: <Clock className="h-5 w-5" /> },
+    { to: '/employee/historikk', label: t('navigation.history'), icon: <History className="h-5 w-5" /> },
   ];
 
   return (
@@ -98,6 +103,13 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
             {/* Notifications, User Menu and Mobile Toggle */}
             <div className="flex items-center gap-4">
               <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsLanguageSelectorOpen(true)}
+              >
+                <Globe className="h-5 w-5" />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -112,7 +124,7 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
                       <p className="text-sm font-medium leading-none">{currentUser?.email}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                          Ansatt
+                          {t('employees.employee')}
                         </span>
                       </p>
                     </div>
@@ -120,7 +132,7 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logg ut</span>
+                    <span>{t('auth.logout')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -186,6 +198,11 @@ const EmployeeLayout = ({ children }: EmployeeLayoutProps) => {
           </div>
         </nav>
       </div>
+      
+      <LanguageSelector
+        isOpen={isLanguageSelectorOpen}
+        onClose={() => setIsLanguageSelectorOpen(false)}
+      />
     </div>
   );
 };
