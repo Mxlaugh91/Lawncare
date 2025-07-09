@@ -42,7 +42,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Globe className="mr-2 h-5 w-5 text-primary" />
@@ -53,33 +53,33 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-3 py-4">
+        <div className="space-y-2 py-3">
           {languages.map((language) => (
             <div
               key={language.code}
-              className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:bg-muted/50 ${
+              className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:bg-muted/50 ${
                 selectedLanguage === language.code
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/30'
               }`}
               onClick={() => handleLanguageSelect(language.code)}
             >
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">{language.flag}</span>
-                <span className="font-medium">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">{language.flag}</span>
+                <span className="font-medium text-sm">
                   {t(`language.${language.name}`)}
                 </span>
               </div>
               
               <div className="flex items-center space-x-2">
                 {i18n.language === language.code && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs px-2 py-0">
                     Aktiv
                   </Badge>
                 )}
                 {selectedLanguage === language.code && (
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <Check className="w-3 h-3 text-primary-foreground" />
+                  <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-primary-foreground" />
                   </div>
                 )}
               </div>
@@ -87,14 +87,16 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
           ))}
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t">
+        <div className="flex justify-end space-x-2 pt-3 border-t">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleCancel}
           >
             {t('language.cancel')}
           </Button>
           <Button
+            size="sm"
             onClick={handleApplyLanguage}
             disabled={selectedLanguage === i18n.language}
           >
