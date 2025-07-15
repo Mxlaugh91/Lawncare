@@ -178,7 +178,7 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
 
             <div>
               <h4 className="font-medium text-sm text-muted-foreground mb-1">Adresse</h4>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <p className="text-base flex-1">{location.address}</p>
                 <TooltipProvider>
                   <Tooltip>
@@ -214,6 +214,25 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                {location.googleEarthLink && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleOpenGoogleEarth}
+                          className="h-8 w-8"
+                        >
+                          <Globe className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Åpne Google Earth-prosjekt</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
 

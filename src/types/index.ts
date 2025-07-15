@@ -15,6 +15,7 @@ export interface Location {
   address: string;
   description?: string;
   imageUrl?: string;
+  googleEarthLink?: string;
   recommendedEquipment?: string;
   maintenanceFrequency: number; // in weeks
   edgeCuttingFrequency: number; // in weeks
