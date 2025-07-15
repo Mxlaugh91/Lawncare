@@ -20,6 +20,7 @@ import {
   MapPin, 
   Copy, 
   Navigation, 
+  Globe,
   Wrench,
   FileText,
   Calendar,
@@ -62,6 +63,12 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
         description: t('errors.generic'),
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleOpenGoogleEarth = () => {
+    if (location.googleEarthLink) {
+      window.open(location.googleEarthLink, '_blank', 'noopener,noreferrer');
     }
   };
 
