@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Archive, Edit, MapPin, Copy, Navigation } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +59,12 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
     const encodedAddress = encodeURIComponent(location.address);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleOpenGoogleEarth = () => {
+    if (location.googleEarthLink) {
+      window.open(location.googleEarthLink, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
