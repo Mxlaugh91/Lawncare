@@ -19,6 +19,7 @@ const locationSchema = z.object({
   address: z.string().min(1, 'Adresse må fylles ut'),
   description: z.string().optional(),
   imageUrl: z.string().url('Ugyldig URL').optional().or(z.literal('')),
+  googleEarthLink: z.string().url('Ugyldig URL').optional().or(z.literal('')),
   recommendedEquipment: z.string().optional(),
   maintenanceFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
   edgeCuttingFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
@@ -171,6 +172,21 @@ export const LocationFormDialog = ({
               />
               {errors.imageUrl && (
                 <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="googleEarthLink">Google Earth Prosjekt URL</Label>
+              <Input
+                id="googleEarthLink"
+                {...register('googleEarthLink')}
+                placeholder="https://earth.google.com/web/..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Lenke til Google Earth-prosjekt med markerte klippeområder
+              </p>
+              {errors.googleEarthLink && (
+                <p className="text-sm text-destructive mt-1">{errors.googleEarthLink.message}</p>
               )}
             </div>
 

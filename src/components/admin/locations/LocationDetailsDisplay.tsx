@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Archive, Edit, MapPin, Copy, Navigation } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +59,12 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
     const encodedAddress = encodeURIComponent(location.address);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleOpenGoogleEarth = () => {
+    if (location.googleEarthLink) {
+      window.open(location.googleEarthLink, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
@@ -178,7 +185,7 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
 
             <div>
               <h4 className="font-medium text-sm text-muted-foreground mb-1">Adresse</h4>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <p className="text-base flex-1">{location.address}</p>
                 <TooltipProvider>
                   <Tooltip>
@@ -214,6 +221,25 @@ export const LocationDetailsDisplay: React.FC<LocationDetailsDisplayProps> = ({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                {location.googleEarthLink && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleOpenGoogleEarth}
+                          className="h-8 w-8"
+                        >
+                          <Globe className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Åpne Google Earth-prosjekt</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
 

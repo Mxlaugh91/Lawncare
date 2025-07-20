@@ -20,6 +20,7 @@ import {
   MapPin, 
   Copy, 
   Navigation, 
+  Globe,
   Wrench,
   FileText,
   Calendar,
@@ -62,6 +63,12 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
         description: t('errors.generic'),
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleOpenGoogleEarth = () => {
+    if (location.googleEarthLink) {
+      window.open(location.googleEarthLink, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -152,7 +159,7 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                         {t('locations.clickToCopyOrOpenMaps')}
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex items-center space-x-1 ml-4">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -187,6 +194,25 @@ export const LocationDetailModal: React.FC<LocationDetailModalProps> = ({
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                      {location.googleEarthLink && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleOpenGoogleEarth}
+                                className="h-8 w-8"
+                              >
+                                <Globe className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Åpne Google Earth-prosjekt</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -271,6 +271,10 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
         initialData={location ? {
           name: location.name,
           address: location.address,
+          description: location.description,
+          imageUrl: location.imageUrl,
+          googleEarthLink: location.googleEarthLink,
+          recommendedEquipment: location.recommendedEquipment,
           maintenanceFrequency: location.maintenanceFrequency,
           edgeCuttingFrequency: location.edgeCuttingFrequency,
           startWeek: location.startWeek,
