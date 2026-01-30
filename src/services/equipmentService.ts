@@ -128,9 +128,7 @@ export const deleteMower = async (mowerId: string) => {
     );
     const serviceIntervalsSnapshot = await getDocs(serviceIntervalsQuery);
     
-    for (const doc of serviceIntervalsSnapshot.docs) {
-      await deleteDoc(doc.ref);
-    }
+    await Promise.all(serviceIntervalsSnapshot.docs.map(doc => deleteDoc(doc.ref)));
     
     // Then delete the mower
     await deleteDoc(doc(db, 'mowers', mowerId));
