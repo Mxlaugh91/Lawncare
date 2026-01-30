@@ -193,6 +193,40 @@ const chunkArray = <T>(array: T[], chunkSize: number): T[][] => {
   return chunks;
 };
 
+export const getLocationsByIds = async (locationIds: string[]) => {
+  try {
+    // Return empty array if no IDs provided
+    if (!locationIds.length) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(locationIds));
+    const chunks = chunkArray(uniqueIds, 30); // 30 is the new limit for 'in' queries
+
+    let allLocations: Location[] = [];
+
+    for (const chunk of chunks) {
+      const q = query(
+        collection(db, 'locations'),
+        where('__name__', 'in', chunk)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const chunkLocations = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Location[];
+
+      allLocations = [...allLocations, ...chunkLocations];
+    }
+
+    return allLocations;
+  } catch (error) {
+    console.error('Error getting locations by ids:', error);
+    throw new Error('Kunne ikke hente stedsdetaljer');
+  }
+};
+
 export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<LocationWithStatus[]> => {
   try {
     console.log('🚀 Starting getLocationsWithWeeklyStatus - optimized version');
