@@ -330,8 +330,8 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
         weekNumber >= location.startWeek && 
         (weekNumber - location.startWeek) % location.edgeCuttingFrequency === 0;
 
-      // If neither maintenance nor edge cutting is due, return early
-      if (!isDueForMaintenanceInSelectedWeek && !isDueForEdgeCuttingInSelectedWeek) {
+      // If neither maintenance nor edge cutting is due, AND no time entries/tags, return early
+      if (!isDueForMaintenanceInSelectedWeek && !isDueForEdgeCuttingInSelectedWeek && enrichedTimeEntries.length === 0 && taggedEmployees.length === 0) {
         return {
           ...location,
           status: 'planlagt' as LocationStatus,

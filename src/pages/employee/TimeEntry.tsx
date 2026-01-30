@@ -27,20 +27,14 @@ import {
   TimeEntryCompletedState
 } from '@/pages/employee/time-entry';
 
-const timeEntrySchema = z.object({
-  locationId: z.string({
-    required_error: 'Sted må velges',
-  }),
-  hours: z.coerce.number({
-    required_error: 'Tidsbruk må fylles ut',
-  }).min(0.1, 'Tidsbruk må være større enn 0'),
-  mowerId: z.string().nullable(),
-  edgeCuttingDone: z.boolean().default(false),
-  notes: z.string().optional(),
-  taggedEmployeeIds: z.array(z.string()).optional(),
-});
-
-type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
+type TimeEntryFormValues = {
+  locationId: string;
+  hours: number;
+  mowerId: string | null;
+  edgeCuttingDone: boolean;
+  notes?: string;
+  taggedEmployeeIds?: string[];
+};
 
 const TimeEntry = () => {
   const { currentUser } = useAuth();

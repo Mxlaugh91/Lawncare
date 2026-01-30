@@ -28,7 +28,6 @@ interface TimeEntryDialogProps {
   notificationId: string;
   locationId: string;
   locationName: string;
-  timeEntryId: string;
 }
 
 export function TimeEntryDialog({
@@ -38,7 +37,6 @@ export function TimeEntryDialog({
   notificationId,
   locationId,
   locationName,
-  timeEntryId,
 }: TimeEntryDialogProps) {
   const { currentUser } = useAuth();
   const { toast } = useToast();

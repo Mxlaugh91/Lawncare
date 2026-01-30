@@ -147,7 +147,6 @@ export function NotificationBell() {
           notificationId={selectedNotification.id}
           locationId={selectedNotification.data.locationId!}
           locationName={selectedNotification.data.locationName!}
-          timeEntryId={selectedNotification.data.timeEntryId!}
         />
       )}
     </>
