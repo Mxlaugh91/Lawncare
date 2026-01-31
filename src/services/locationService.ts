@@ -257,11 +257,9 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
 
     // 3. Batch fetch ALL time entries for the week (chunked queries due to Firestore 'in' limit)
     const locationIds = locations.map(loc => loc.id);
-    const locationChunks = chunkArray(locationIds, 10); // Firestore 'in' query limit is 10
+    const locationChunks = chunkArray(locationIds, 30); // Firestore 'in' query limit is 30
     
-    let allTimeEntries: any[] = [];
-    
-    for (const chunk of locationChunks) {
+    const timeEntriesPromises = locationChunks.map(async (chunk) => {
       const timeEntriesQuery = query(
         collection(db, 'timeEntries'),
         where('locationId', 'in', chunk),
@@ -271,13 +269,14 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
       );
       
       const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-      const chunkEntries = timeEntriesSnapshot.docs.map(doc => ({
+      return timeEntriesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
-      allTimeEntries = [...allTimeEntries, ...chunkEntries];
-    }
+    });
+
+    const chunkedTimeEntries = await Promise.all(timeEntriesPromises);
+    const allTimeEntries = chunkedTimeEntries.flat();
 
     console.log(`⏰ Found ${allTimeEntries.length} time entries for week ${weekNumber}`);
 
@@ -300,22 +299,23 @@ export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<
     
     if (allEmployeeIds.size > 0) {
       const employeeIdArray = Array.from(allEmployeeIds);
-      const employeeChunks = chunkArray(employeeIdArray, 10);
+      const employeeChunks = chunkArray(employeeIdArray, 30);
       
-      for (const chunk of employeeChunks) {
+      const usersPromises = employeeChunks.map(async (chunk) => {
         const usersQuery = query(
           collection(db, 'users'),
           where('__name__', 'in', chunk)
         );
         
         const usersSnapshot = await getDocs(usersQuery);
-        const chunkUsers = usersSnapshot.docs.map(doc => ({
+        return usersSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        
-        allUsers = [...allUsers, ...chunkUsers];
-      }
+      });
+
+      const chunkedUsers = await Promise.all(usersPromises);
+      allUsers = chunkedUsers.flat();
     }
 
     console.log(`👤 Found ${allUsers.length} users`);
