@@ -67,7 +67,7 @@ service cloud.firestore {
 
       // Ansatte kan kun oppdatere lastMaintenanceWeek, lastEdgeCuttingWeek og updatedAt
       // Dette er nødvendig for timeEntry-transaksjoner
-      allow update: if isAuthenticated() &&
+      allow update: if isEmployee() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMaintenanceWeek', 'lastEdgeCuttingWeek', 'updatedAt']) &&
         (request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMaintenanceWeek']) == false || 
          isValidWeekNumber(request.resource.data.lastMaintenanceWeek)) &&
@@ -94,7 +94,7 @@ service cloud.firestore {
 
       // Brukere kan opprette egne tidsregistreringer
       // Dataene må inneholde 'locationId', 'employeeId', 'hours' og 'hours' må være positivt tall
-      allow create: if isAuthenticated() &&
+      allow create: if (isEmployee() || isAdmin()) &&
         request.resource.data.employeeId == request.auth.uid &&
         request.resource.data.keys().hasAll(['locationId', 'employeeId', 'hours']) &&
         request.resource.data.hours is number &&
@@ -120,7 +120,7 @@ service cloud.firestore {
       // Administratorer kan oppdatere alle felt.
       // Ansatte kan kun oppdatere 'totalHours' (for brukslogging) og 'updatedAt'.
       allow update: if isAdmin() ||
-        (isAuthenticated() &&
+        (isEmployee() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalHours', 'updatedAt']) &&
           request.resource.data.totalHours is number &&
           request.resource.data.totalHours >= resource.data.totalHours);
@@ -142,7 +142,7 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
 
       // Alle autentiserte brukere kan oppdatere serviceintervaller (f.eks. for å tilbakestille intervaller)
-      allow update: if isAuthenticated();
+      allow update: if (isEmployee() || isAdmin());
 
       // Validering ved opprettelse av serviceintervall data
       allow create: if isAdmin() &&
@@ -159,7 +159,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
 
       // Alle autentiserte brukere kan opprette service logger
-      allow create: if isAuthenticated() &&
+      allow create: if (isEmployee() || isAdmin()) &&
         request.resource.data.keys().hasAll(['mowerId', 'serviceIntervalId', 'performedBy', 'hoursAtService']) &&
         request.resource.data.mowerId is string &&
         request.resource.data.serviceIntervalId is string &&
@@ -178,7 +178,7 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid;
 
       // Alle autentiserte brukere kan opprette varsler (for taggingsystem)
-      allow create: if isAuthenticated() &&
+      allow create: if (isEmployee() || isAdmin()) &&
         request.resource.data.keys().hasAll(['userId', 'title', 'message']) &&
         request.resource.data.userId is string &&
         request.resource.data.title is string &&

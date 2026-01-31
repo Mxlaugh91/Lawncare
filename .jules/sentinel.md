@@ -1,0 +1,4 @@
+## 2024-05-23 - Authorization Bypass via permissive isAuthenticated() check
+**Vulnerability:** Firestore rules relied on `isAuthenticated()` for write operations (create/update) on critical collections like `locations`, `mowers`, and `notifications`, assuming that being logged in was equivalent to being a trusted employee.
+**Learning:** `isAuthenticated()` only proves the user signed in (e.g., via a public signup flow), not that they have a role in the system. Unauthorized users could potentially modify business data if registration was open or if they obtained a valid token.
+**Prevention:** Always enforce role-based access control (RBAC) using checks like `isEmployee()` or `isAdmin()` for write operations, ensuring that the user document exists and has the correct role, rather than just checking for the presence of an auth token.
