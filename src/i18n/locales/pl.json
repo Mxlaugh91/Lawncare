@@ -39,7 +39,9 @@
     "loginButton": "Zaloguj się",
     "loggingIn": "Logowanie...",
     "loginFailed": "Logowanie nie powiodło się. Sprawdź e-mail i hasło.",
-    "contactAdmin": "Skontaktuj się z administratorem w celu uzyskania dostępu"
+    "contactAdmin": "Skontaktuj się z administratorem w celu uzyskania dostępu",
+    "showPassword": "Pokaż hasło",
+    "hidePassword": "Ukryj hasło"
   },
   "navigation": {
     "dashboard": "Przegląd",

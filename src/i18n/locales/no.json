@@ -39,7 +39,9 @@
     "loginButton": "Logg inn",
     "loggingIn": "Logger inn...",
     "loginFailed": "Innlogging mislyktes. Sjekk e-post og passord.",
-    "contactAdmin": "Ta kontakt med administrator for tilgang"
+    "contactAdmin": "Ta kontakt med administrator for tilgang",
+    "showPassword": "Vis passord",
+    "hidePassword": "Skjul passord"
   },
   "navigation": {
     "dashboard": "Oversikt",
