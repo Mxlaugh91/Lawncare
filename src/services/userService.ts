@@ -51,6 +51,15 @@ export const getUserById = async (userId: string) => {
   }
 };
 
+// Helper function to chunk arrays for Firestore 'in' queries
+const chunkArray = <T>(array: T[], chunkSize: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+};
+
 export const getUsersByIds = async (userIds: string[]) => {
   try {
     // Return empty array if no IDs provided
@@ -58,17 +67,28 @@ export const getUsersByIds = async (userIds: string[]) => {
       return [];
     }
 
-    // Create a query to get all users where id is in the provided array
-    const q = query(
-      collection(db, 'users'),
-      where('__name__', 'in', userIds)
-    );
+    const uniqueIds = Array.from(new Set(userIds));
+    const chunks = chunkArray(uniqueIds, 30); // 30 is the new limit for 'in' queries
 
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as User[];
+    let allUsers: User[] = [];
+
+    for (const chunk of chunks) {
+      // Create a query to get all users where id is in the provided array
+      const q = query(
+        collection(db, 'users'),
+        where('__name__', 'in', chunk)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const chunkUsers = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+
+      allUsers = [...allUsers, ...chunkUsers];
+    }
+
+    return allUsers;
   } catch (error) {
     console.error('Error getting users by ids:', error);
     throw new Error('Kunne ikke hente brukerdetaljer');

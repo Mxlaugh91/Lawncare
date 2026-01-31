@@ -245,21 +245,34 @@ export const getRecentTimeEntries = async (count: number = 5) => {
     );
     
     const querySnapshot = await getDocs(q);
-    const entries = await Promise.all(querySnapshot.docs.map(async doc => {
-      const data = doc.data();
-      
-      const location = await locationService.getLocationById(data.locationId);
-      const employee = await userService.getUserById(data.employeeId);
-      
-      return {
-        id: doc.id,
-        ...data,
-        locationName: location?.name || 'Unknown Location',
-        employeeName: employee?.name || 'Unknown Employee'
-      };
+
+    // Initial mapping to get IDs
+    const initialEntries = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as TimeEntry[];
+
+    const locationIds = initialEntries.map(e => e.locationId).filter(Boolean);
+    const employeeIds = initialEntries.map(e => e.employeeId).filter(Boolean);
+
+    // Batch fetch related data
+    const [locations, employees] = await Promise.all([
+      locationService.getLocationsByIds(locationIds),
+      userService.getUsersByIds(employeeIds)
+    ]);
+
+    // Create lookup maps
+    const locationMap = new Map(locations.map(l => [l.id, l]));
+    const employeeMap = new Map(employees.map(e => [e.id, e]));
+
+    // Enrich entries
+    const entries = initialEntries.map(entry => ({
+      ...entry,
+      locationName: locationMap.get(entry.locationId)?.name || 'Unknown Location',
+      employeeName: employeeMap.get(entry.employeeId)?.name || 'Unknown Employee'
     }));
     
-    return entries as TimeEntry[];
+    return entries;
   } catch (error) {
     console.error('Error in getRecentTimeEntries:', error);
     throw new Error('Could not get recent time entries');
