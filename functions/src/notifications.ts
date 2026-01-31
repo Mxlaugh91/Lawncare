@@ -251,26 +251,14 @@ export const sendBulkNotifications = onCall<BulkNotificationData>(
       }
 
       // Create notifications for each user
-      const batch = db.batch();
-      const notifications: Array<{ id: string; userId: string }> = [];
-
-      userIds.forEach((userId: string) => {
-        const notificationRef = db.collection('notifications').doc();
-        const notificationData = {
-          userId,
-          title,
-          message,
-          type: type || 'general',
-          data: customData || {},
-          read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-        
-        batch.set(notificationRef, notificationData);
-        notifications.push({ id: notificationRef.id, userId });
-      });
-
-      await batch.commit();
+      const notifications = await processBulkNotifications(
+        db,
+        userIds,
+        title,
+        message,
+        type,
+        customData
+      );
 
       console.log(`Successfully created ${notifications.length} bulk notifications`);
       
@@ -286,6 +274,53 @@ export const sendBulkNotifications = onCall<BulkNotificationData>(
     }
   }
 );
+
+/**
+ * Helper function to process bulk notifications
+ * Extracted for better testing and batch handling
+ */
+export async function processBulkNotifications(
+  db: admin.firestore.Firestore,
+  userIds: string[],
+  title: string,
+  message: string,
+  type?: string,
+  customData?: Record<string, unknown>
+): Promise<Array<{ id: string; userId: string }>> {
+  const notifications: Array<{ id: string; userId: string }> = [];
+  const BATCH_SIZE = 500;
+
+  // Split userIds into chunks
+  const chunks: string[][] = [];
+  for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+    chunks.push(userIds.slice(i, i + BATCH_SIZE));
+  }
+
+  // Process batches in parallel
+  await Promise.all(chunks.map(async (chunk) => {
+    const batch = db.batch();
+
+    chunk.forEach((userId) => {
+      const notificationRef = db.collection('notifications').doc();
+      const notificationData = {
+        userId,
+        title,
+        message,
+        type: type || 'general',
+        data: customData || {},
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      batch.set(notificationRef, notificationData);
+      notifications.push({ id: notificationRef.id, userId });
+    });
+
+    await batch.commit();
+  }));
+
+  return notifications;
+}
 
 /**
  * Optional: Cloud Function to clean up old notifications
