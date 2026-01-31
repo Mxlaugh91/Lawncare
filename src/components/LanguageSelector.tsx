@@ -53,11 +53,14 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-2 py-2">
+        <div className="space-y-2 py-2" role="radiogroup" aria-label={t('language.title')}>
           {languages.map((language) => (
-            <div
+            <button
               key={language.code}
-              className={`flex items-center justify-between p-2 rounded-md border cursor-pointer transition-all duration-200 hover:bg-muted/50 ${
+              type="button"
+              role="radio"
+              aria-checked={selectedLanguage === language.code}
+              className={`w-full flex items-center justify-between p-2 rounded-md border cursor-pointer transition-all duration-200 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 selectedLanguage === language.code
                   ? 'border-primary bg-primary/10'
                   : 'border-border hover:border-primary/50'
@@ -83,7 +86,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
                   </div>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
