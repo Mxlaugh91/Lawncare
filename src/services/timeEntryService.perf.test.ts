@@ -78,3 +78,43 @@ describe('getRecentTimeEntries Performance', () => {
     expect(userService.getUserById).not.toHaveBeenCalled();
   });
 });
+
+describe('getTimeEntriesForLocation Performance', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should measure execution time for fetching many users', async () => {
+    // 50 employees -> 5 chunks of 10
+    const employeeIds = Array.from({ length: 50 }, (_, i) => `emp-${i}`);
+
+    // Create mock docs
+    const mockDocs = employeeIds.map((empId, i) => ({
+      id: `entry-${i}`,
+      data: () => ({
+        locationId: 'loc-1',
+        employeeId: empId,
+        date: new Date(),
+        hours: 2
+      })
+    }));
+
+    (getDocs as any).mockResolvedValue({
+      docs: mockDocs,
+      empty: false
+    });
+
+    // Mock getUsersByIds with a delay
+    (userService.getUsersByIds as any).mockImplementation(async (ids: string[]) => {
+      await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay per call
+      return ids.map(id => ({ id, name: `User ${id}` }));
+    });
+
+    const startTime = performance.now();
+    await timeEntryService.getTimeEntriesForLocation('loc-1');
+    const endTime = performance.now();
+
+    const duration = endTime - startTime;
+    console.log(`\n[Benchmark] getTimeEntriesForLocation with 50 employees: ${duration.toFixed(2)}ms\n`);
+  });
+});
