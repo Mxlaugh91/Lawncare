@@ -99,13 +99,13 @@ describe('getTimeEntriesForLocation Performance', () => {
       })
     }));
 
-    (getDocs as any).mockResolvedValue({
+    vi.mocked(getDocs).mockResolvedValue({
       docs: mockDocs,
       empty: false
-    });
+    } as Awaited<ReturnType<typeof getDocs>>);
 
     // Mock getUsersByIds with a delay
-    (userService.getUsersByIds as any).mockImplementation(async (ids: string[]) => {
+    vi.mocked(userService.getUsersByIds).mockImplementation(async (ids: string[]) => {
       await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay per call
       return ids.map(id => ({ id, name: `User ${id}` }));
     });
