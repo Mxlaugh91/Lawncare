@@ -148,10 +148,11 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
 
       const employeeChunks = chunkArray(employeeIdArray, 10);
       
-      for (const chunk of employeeChunks) {
-        const users = await userService.getUsersByIds(chunk);
-        allUsers = [...allUsers, ...users];
-      }
+      const userChunks = await Promise.all(
+        employeeChunks.map(chunk => userService.getUsersByIds(chunk))
+      );
+
+      allUsers = [...allUsers, ...userChunks.flat()];
     }
 
     // Create a lookup map for users
