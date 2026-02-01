@@ -18,8 +18,20 @@ const locationSchema = z.object({
   name: z.string().min(1, 'Navn må fylles ut'),
   address: z.string().min(1, 'Adresse må fylles ut'),
   description: z.string().optional(),
-  imageUrl: z.string().url('Ugyldig URL').optional().or(z.literal('')),
-  googleEarthLink: z.string().url('Ugyldig URL').optional().or(z.literal('')),
+  imageUrl: z.string().url('Ugyldig URL').refine((val) => {
+    try {
+      return ['http:', 'https:'].includes(new URL(val).protocol);
+    } catch {
+      return false;
+    }
+  }, 'URL må starte med http:// eller https://').optional().or(z.literal('')),
+  googleEarthLink: z.string().url('Ugyldig URL').refine((val) => {
+    try {
+      return ['http:', 'https:'].includes(new URL(val).protocol);
+    } catch {
+      return false;
+    }
+  }, 'URL må starte med http:// eller https://').optional().or(z.literal('')),
   recommendedEquipment: z.string().optional(),
   maintenanceFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
   edgeCuttingFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
