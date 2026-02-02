@@ -44,6 +44,7 @@ export const TimeEntryNotes = React.memo(({
           <CardContent>
             <Textarea
               placeholder={t('timeEntry.notesPlaceholder')}
+              maxLength={500}
               className="min-h-[100px] resize-none border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
               {...register('notes')}
             />

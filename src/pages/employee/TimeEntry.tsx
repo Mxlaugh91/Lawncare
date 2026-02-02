@@ -63,8 +63,8 @@ const TimeEntry = () => {
     }).min(0.1, t('timeEntry.hoursMinimum')),
     mowerId: z.string().nullable(),
     edgeCuttingDone: z.boolean().default(false),
-    notes: z.string().optional(),
-    taggedEmployeeIds: z.array(z.string()).optional(),
+    notes: z.string().max(500, t('errors.validationError')).optional(),
+    taggedEmployeeIds: z.array(z.string()).max(10, t('errors.validationError')).optional(),
   });
 
   const {
