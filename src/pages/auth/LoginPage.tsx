@@ -25,8 +25,8 @@ const LoginPage = () => {
   const [isLanguageSelectorOpen, setIsLanguageSelectorOpen] = useState(false);
 
   const loginSchema = z.object({
-    email: z.string().email(t('errors.validationError')),
-    password: z.string().min(6, t('errors.validationError')),
+    email: z.string().max(100, t('errors.validationError')).email(t('errors.validationError')),
+    password: z.string().min(6, t('errors.validationError')).max(100, t('errors.validationError')),
   });
 
   type LoginFormValues = z.infer<typeof loginSchema>;
