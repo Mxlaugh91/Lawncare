@@ -1,0 +1,4 @@
+## 2025-05-09 - Unrestricted Time Entry Updates
+**Vulnerability:** Tagged users could update any field in a time entry document (e.g., `hours`, `employeeId`, `locationId`), leading to potential data tampering or attribution fraud.
+**Learning:** Firestore `allow update` rules that rely on `hasAny(['field'])` without `affectedKeys().hasOnly(...)` restrictions are dangerous because they open the entire document to modification once the condition is met.
+**Prevention:** Always combine role/condition-based access with `request.resource.data.diff(resource.data).affectedKeys().hasOnly(['allowedFields'])` to strictly limit the scope of changes.
