@@ -102,11 +102,6 @@ service cloud.firestore {
 
       // Kun administratorer kan oppdatere eller slette tidsregistreringer
       allow update, delete: if isAdmin();
-
-      // Brukere kan oppdatere tidsregistreringer de er tagget i (f.eks. for å markere som fullført)
-      allow update: if isAuthenticated() &&
-        resource.data.keys().hasAny(['taggedEmployeeIds']) &&
-        request.auth.uid in resource.data.taggedEmployeeIds;
     }
 
     // --- Samling: mowers ---
