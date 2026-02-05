@@ -104,9 +104,11 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
 
       // Brukere kan oppdatere tidsregistreringer de er tagget i (f.eks. for å markere som fullført)
+      // Begrenset til kun å oppdatere 'taggedEmployeeIds' feltet
       allow update: if isAuthenticated() &&
         resource.data.keys().hasAny(['taggedEmployeeIds']) &&
-        request.auth.uid in resource.data.taggedEmployeeIds;
+        request.auth.uid in resource.data.taggedEmployeeIds &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taggedEmployeeIds']);
     }
 
     // --- Samling: mowers ---
@@ -142,7 +144,13 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
 
       // Alle autentiserte brukere kan oppdatere serviceintervaller (f.eks. for å tilbakestille intervaller)
-      allow update: if isAuthenticated();
+      // Men de kan kun oppdatere feltene relatert til tilbakestilling
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastResetHours', 'lastResetDate', 'lastResetBy']) &&
+         request.resource.data.lastResetHours is number &&
+         request.resource.data.lastResetDate is timestamp &&
+         request.resource.data.lastResetBy is string);
 
       // Validering ved opprettelse av serviceintervall data
       allow create: if isAdmin() &&
