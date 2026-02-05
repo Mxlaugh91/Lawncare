@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,8 +18,8 @@ const locationSchema = z.object({
   name: z.string().min(1, 'Navn må fylles ut'),
   address: z.string().min(1, 'Adresse må fylles ut'),
   description: z.string().optional(),
-  imageUrl: z.string().url('Ugyldig URL').optional().or(z.literal('')),
-  googleEarthLink: z.string().url('Ugyldig URL').optional().or(z.literal('')),
+  imageUrl: z.string().url('Ugyldig URL').refine((val) => val.startsWith('http://') || val.startsWith('https://'), 'URL må starte med http:// eller https://').optional().or(z.literal('')),
+  googleEarthLink: z.string().url('Ugyldig URL').refine((val) => val.startsWith('http://') || val.startsWith('https://'), 'URL må starte med http:// eller https://').optional().or(z.literal('')),
   recommendedEquipment: z.string().optional(),
   maintenanceFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
   edgeCuttingFrequency: z.coerce.number().min(1, 'Frekvens må være større enn 0'),
@@ -100,7 +100,7 @@ export const LocationFormDialog = ({
     try {
       await onSubmit(data);
       onClose();
-    } catch (error) {
+    } catch {
       // Error handling is done in parent component
     }
   };
