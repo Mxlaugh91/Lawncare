@@ -50,6 +50,11 @@ service cloud.firestore {
         request.resource.data.name is string &&
         request.resource.data.role in ['admin', 'employee'];
 
+      // Tillat brukere å oppdatere sin egen FCM token
+      allow update: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken', 'updatedAt']);
+
       // Kun administratorer kan slette brukerdokumenter
       allow delete: if isAdmin();
     }
