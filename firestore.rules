@@ -141,8 +141,14 @@ service cloud.firestore {
       // Kun administratorer kan opprette eller slette serviceintervaller
       allow create, delete: if isAdmin();
 
-      // Alle autentiserte brukere kan oppdatere serviceintervaller (f.eks. for å tilbakestille intervaller)
-      allow update: if isAuthenticated();
+      // Kun administratorer kan oppdatere serviceintervaller generelt
+      allow update: if isAdmin();
+
+      // Ansatte kan kun oppdatere felter relatert til utført service
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastResetHours', 'lastResetDate', 'lastResetBy']) &&
+        request.resource.data.lastResetHours is number &&
+        request.resource.data.lastResetHours >= resource.data.lastResetHours;
 
       // Validering ved opprettelse av serviceintervall data
       allow create: if isAdmin() &&
