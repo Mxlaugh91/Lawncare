@@ -1,0 +1,4 @@
+## 2025-02-12 - Overly Permissive Firestore Updates
+**Vulnerability:** The `serviceIntervals` collection allowed any authenticated user to update ALL fields in a document via `allow update: if isAuthenticated();`. This meant employees could change service interval descriptions, hour intervals, or `mowerId` references, potentially disrupting maintenance schedules.
+**Learning:** Firestore rules that allow `update` based solely on authentication are dangerous. Even if the UI only exposes certain fields, a malicious user can send a request to update ANY field.
+**Prevention:** Always use `request.resource.data.diff(resource.data).affectedKeys().hasOnly([...])` to restrict which fields can be updated by non-admin users. This ensures that even with update permission, the scope of the update is strictly limited to safe fields.
