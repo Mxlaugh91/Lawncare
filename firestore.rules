@@ -50,6 +50,10 @@ service cloud.firestore {
         request.resource.data.name is string &&
         request.resource.data.role in ['admin', 'employee'];
 
+      // Brukere kan oppdatere sin egen fcmToken for push-varsler
+      allow update: if isAuthenticated() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken', 'updatedAt']);
+
       // Kun administratorer kan slette brukerdokumenter
       allow delete: if isAdmin();
     }
@@ -141,8 +145,13 @@ service cloud.firestore {
       // Kun administratorer kan opprette eller slette serviceintervaller
       allow create, delete: if isAdmin();
 
-      // Alle autentiserte brukere kan oppdatere serviceintervaller (f.eks. for å tilbakestille intervaller)
-      allow update: if isAuthenticated();
+      // Administratorer kan oppdatere alle felt.
+      // Ansatte kan kun oppdatere felter knyttet til utført service (tilbakestilling).
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastResetHours', 'lastResetDate', 'lastResetBy']) &&
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastResetHours']) == false || request.resource.data.lastResetHours is number)
+      );
 
       // Validering ved opprettelse av serviceintervall data
       allow create: if isAdmin() &&
