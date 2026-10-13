@@ -41,6 +41,15 @@ jobs:
       - name: Installer avhengigheter
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm exec vitest run
+
       - name: DEBUG - Show full content of src/sw.js before build
         run: |
           echo "=== Full content of src/sw.js (from CI/CD environment) ==="

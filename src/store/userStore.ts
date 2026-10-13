@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User } from '@/types';
+import { User, UserLookup } from '@/types';
 import * as userService from '@/services/userService';
 
 interface UserState {
@@ -11,7 +11,7 @@ interface UserState {
   fetchUsers: () => Promise<void>;
   addEmployee: (employeeData: { email: string; name: string; }) => Promise<string>;
   getUserById: (userId: string) => Promise<User | null>;
-  getUsersByIds: (userIds: string[]) => Promise<User[]>;
+  getUsersByIds: (userIds: string[]) => Promise<UserLookup[]>;
   
   // Computed values / Selectors
   getEmployees: () => User[];

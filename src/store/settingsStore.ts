@@ -12,7 +12,7 @@ interface SettingsState {
   updateSeasonSettings: (settings: Partial<SeasonSettings>) => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsState>((set, get) => ({
+export const useSettingsStore = create<SettingsState>((set) => ({
   seasonSettings: null,
   loading: false,
   error: null,

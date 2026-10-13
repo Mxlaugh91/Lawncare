@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, MinusCircle } from 'lucide-react';
-import { Mower } from '@/types';
 
 const mowerSchema = z.object({
   name: z.string().min(1, 'Navn må fylles ut'),
@@ -58,7 +57,7 @@ export const AddMowerDialog = ({ onSubmit, loading }: AddMowerDialogProps) => {
       await onSubmit(data);
       reset();
       setIsOpen(false);
-    } catch (error) {
+    } catch {
       // Error handling is done in parent component
     }
   };

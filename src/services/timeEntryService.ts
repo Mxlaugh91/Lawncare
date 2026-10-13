@@ -1,7 +1,6 @@
 import { 
   collection, 
   doc, 
-  addDoc, 
   getDoc, 
   getDocs, 
   query, 
@@ -11,16 +10,61 @@ import {
   serverTimestamp,
   runTransaction,
   limit,
-  updateDoc
+  updateDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { TimeEntry } from '@/types';
+import { TimeEntry, TimeEntryInput, UserLookup } from '@/types';
 import * as userService from './userService';
 import * as locationService from './locationService';
-import { getISOWeekNumber } from '@/lib/utils';
+import { getISOWeekNumber, getISOWeekDates } from '@/lib/utils';
 
-export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'>) => {
+/** Maximum number of hours that can be registered for a single time entry. */
+export const MAX_TIME_ENTRY_HOURS = 24;
+/** Maximum number of employees that can be tagged on a single time entry. */
+export const MAX_TAGGED_EMPLOYEES = 20;
+/** Maximum length of the notes field (enforced by the security rules). */
+export const MAX_TIME_ENTRY_NOTES_LENGTH = 2000;
+
+/**
+ * Validates time entry input against the hardened security-rules contract:
+ * hours must be > 0 and <= 24, and at most 20 employee ids may be tagged.
+ * Returns the normalized tagged employee list.
+ */
+const validateTimeEntryInput = (entryData: TimeEntryInput): string[] => {
+  if (!entryData.locationId || !entryData.employeeId || !entryData.date) {
+    throw new Error('Missing required time entry fields');
+  }
+
+  if (
+    typeof entryData.hours !== 'number' ||
+    !Number.isFinite(entryData.hours) ||
+    entryData.hours <= 0 ||
+    entryData.hours > MAX_TIME_ENTRY_HOURS
+  ) {
+    throw new Error(`Hours must be greater than 0 and at most ${MAX_TIME_ENTRY_HOURS}`);
+  }
+
+  if ((entryData.notes ?? '').length > MAX_TIME_ENTRY_NOTES_LENGTH) {
+    throw new Error(`Notes cannot exceed ${MAX_TIME_ENTRY_NOTES_LENGTH} characters`);
+  }
+
+  const taggedEmployeeIds = entryData.taggedEmployeeIds ?? [];
+  if (
+    !Array.isArray(taggedEmployeeIds) ||
+    taggedEmployeeIds.length > MAX_TAGGED_EMPLOYEES ||
+    taggedEmployeeIds.some(id => typeof id !== 'string' || id.length === 0)
+  ) {
+    throw new Error(`At most ${MAX_TAGGED_EMPLOYEES} tagged employees are allowed`);
+  }
+
+  return taggedEmployeeIds;
+};
+
+export const addTimeEntry = async (entryData: TimeEntryInput) => {
   try {
+    const taggedEmployeeIds = validateTimeEntryInput(entryData);
+
     const timeEntryId = await runTransaction(db, async (transaction) => {
       const locationRef = doc(db, 'locations', entryData.locationId);
       const locationDoc = await transaction.get(locationRef);
@@ -45,20 +89,40 @@ export const addTimeEntry = async (entryData: Omit<TimeEntry, 'id' | 'createdAt'
       const timeEntryRef = doc(collection(db, 'timeEntries'));
       const newTimeEntryId = timeEntryRef.id;
 
-      const timeEntryData = {
-        ...entryData,
+      // Only write the fields allowed by the hardened timeEntries rules.
+      // Display-only fields (employeeName/locationName) are intentionally not
+      // persisted; names are resolved at read time from userDirectory.
+      const timeEntryData: Record<string, unknown> = {
+        employeeId: entryData.employeeId,
+        locationId: entryData.locationId,
+        hours: entryData.hours,
+        date: entryData.date,
+        notes: entryData.notes ?? '',
+        edgeCuttingDone: entryData.edgeCuttingDone === true,
+        taggedEmployeeIds,
         createdAt: serverTimestamp(),
       };
 
+      if (entryData.mowerId) {
+        timeEntryData.mowerId = entryData.mowerId;
+      }
+
       transaction.set(timeEntryRef, timeEntryData);
 
-      const locationUpdate: Record<string, any> = {
+      // The location document is the read source for weekly status (employees
+      // cannot read other employees' time entries), so record who performed
+      // the work and when alongside the week number.
+      const locationUpdate: Record<string, unknown> = {
         lastMaintenanceWeek: currentWeek,
+        lastMaintenanceBy: entryData.employeeId,
+        lastMaintenanceAt: entryData.date,
         updatedAt: serverTimestamp()
       };
 
       if (entryData.edgeCuttingDone) {
         locationUpdate.lastEdgeCuttingWeek = currentWeek;
+        locationUpdate.lastEdgeCuttingBy = entryData.employeeId;
+        locationUpdate.lastEdgeCuttingAt = entryData.date;
       }
 
       transaction.update(locationRef, locationUpdate);
@@ -91,18 +155,10 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     );
 
     if (weekNumber) {
-      const currentYear = new Date().getFullYear();
-      const januaryFirst = new Date(currentYear, 0, 1);
-      const firstThursday = new Date(currentYear, 0, 1 + ((4 - januaryFirst.getDay()) + 7) % 7);
-      const firstWeekStart = new Date(firstThursday);
-      firstWeekStart.setDate(firstThursday.getDate() - 3);
-      
-      const weekStart = new Date(firstWeekStart);
-      weekStart.setDate(firstWeekStart.getDate() + (weekNumber - 1) * 7);
+      // Use the shared ISO-week helpers so week ranges always start on Monday
+      // and include the full final day.
+      const { start: weekStart, end: weekEnd } = getISOWeekDates(weekNumber);
       weekStart.setHours(0, 0, 0, 0);
-      
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
       q = query(
@@ -133,7 +189,8 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     });
 
     // Fetch all users in batches if we have employee IDs
-    let allUsers: any[] = [];
+    // (userDirectory-backed lookup: employees cannot read the users collection)
+    let allUsers: UserLookup[] = [];
     if (allEmployeeIds.size > 0) {
       const employeeIdArray = Array.from(allEmployeeIds);
       
@@ -156,7 +213,7 @@ export const getTimeEntriesForLocation = async (locationId: string, weekNumber?:
     }
 
     // Create a lookup map for users
-    const usersById = new Map<string, any>();
+    const usersById = new Map<string, UserLookup>();
     allUsers.forEach(user => {
       usersById.set(user.id, user);
     });
@@ -205,12 +262,14 @@ export const getTimeEntriesForEmployee = async (employeeId: string, startDate?: 
 
 export const getWeeklyAggregatedHoursByEmployee = async () => {
   const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
+  // ISO weeks start on Monday. The ISO year can differ from the calendar year
+  // around New Year, so pass it explicitly to the week helper.
+  const currentWeek = getISOWeekNumber(now);
+  const dayNumber = (now.getDay() + 6) % 7;
+  const thursday = new Date(now.valueOf());
+  thursday.setDate(thursday.getDate() - dayNumber + 3);
+  const { start: startOfWeek, end: endOfWeek } = getISOWeekDates(currentWeek, thursday.getFullYear());
   startOfWeek.setHours(0, 0, 0, 0);
-  
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
   const q = query(
@@ -280,49 +339,6 @@ export const getRecentTimeEntries = async (count: number = 5) => {
   }
 };
 
-export const getLatestTimeEntryForLocationAndType = async (locationId: string, isEdgeCutting: boolean = false) => {
-  try {
-    let q = query(
-      collection(db, 'timeEntries'),
-      where('locationId', '==', locationId),
-      orderBy('date', 'desc'),
-      limit(1)
-    );
-
-    if (isEdgeCutting) {
-      q = query(
-        collection(db, 'timeEntries'),
-        where('locationId', '==', locationId),
-        where('edgeCuttingDone', '==', true),
-        orderBy('date', 'desc'),
-        limit(1)
-      );
-    }
-    
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      return null;
-    }
-    
-    const timeEntry = {
-      id: querySnapshot.docs[0].id,
-      ...querySnapshot.docs[0].data()
-    } as TimeEntry;
-    
-    // Always fetch the current employee name from the users collection
-    if (timeEntry.employeeId) {
-      const employee = await userService.getUserById(timeEntry.employeeId);
-      timeEntry.employeeName = employee?.name || 'Ukjent ansatt';
-    }
-    
-    return timeEntry;
-  } catch (error) {
-    console.error('Error in getLatestTimeEntryForLocationAndType:', error);
-    throw new Error('Could not get latest time entry');
-  }
-};
-
 export const tagEmployeeForTimeEntry = async (timeEntryId: string, taggedEmployeeId: string) => {
   try {
     const timeEntryRef = doc(db, 'timeEntries', timeEntryId);
@@ -332,11 +348,17 @@ export const tagEmployeeForTimeEntry = async (timeEntryId: string, taggedEmploye
       throw new Error('Time entry not found');
     }
     
-    const currentTaggedEmployees = timeEntryDoc.data().taggedEmployeeIds || [];
+    const currentTaggedEmployees: string[] = timeEntryDoc.data().taggedEmployeeIds || [];
     
     if (!currentTaggedEmployees.includes(taggedEmployeeId)) {
+      if (currentTaggedEmployees.length >= MAX_TAGGED_EMPLOYEES) {
+        throw new Error(`At most ${MAX_TAGGED_EMPLOYEES} tagged employees are allowed`);
+      }
+
+      // arrayUnion avoids read-modify-write races on concurrently tagged employees.
       await updateDoc(timeEntryRef, {
-        taggedEmployeeIds: [...currentTaggedEmployees, taggedEmployeeId]
+        taggedEmployeeIds: arrayUnion(taggedEmployeeId),
+        updatedAt: serverTimestamp()
       });
     }
   } catch (error) {

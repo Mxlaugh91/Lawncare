@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -100,7 +100,7 @@ export const LocationFormDialog = ({
     try {
       await onSubmit(data);
       onClose();
-    } catch (error) {
+    } catch {
       // Error handling is done in parent component
     }
   };

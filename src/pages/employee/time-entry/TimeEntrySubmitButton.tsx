@@ -5,19 +5,17 @@ import { Button } from '@/components/ui/button';
 
 interface TimeEntrySubmitButtonProps {
   isSubmitting: boolean;
-  onSubmit: () => void;
 }
 
 export const TimeEntrySubmitButton = React.memo(({ 
-  isSubmitting, 
-  onSubmit 
+  isSubmitting 
 }: TimeEntrySubmitButtonProps) => {
   const { t } = useTranslation();
 
   return (
     <div className="sticky bottom-4 z-10">
       <Button 
-        onClick={onSubmit}
+        type="submit"
         className="w-full h-16 text-lg font-semibold bg-primary hover:bg-primary/90 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] button-effect" 
         disabled={isSubmitting}
         size="lg"

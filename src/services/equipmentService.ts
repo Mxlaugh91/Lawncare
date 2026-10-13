@@ -9,14 +9,47 @@ import {
   query, 
   where, 
   orderBy, 
-  Timestamp, 
-  serverTimestamp 
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
-import { db } from './firebase';
-import { Mower, ServiceInterval, ServiceLog } from '@/types';
+import { auth, db } from './firebase';
+import { Mower, NewMowerInput, ServiceInterval, ServiceLog } from '@/types';
 import * as userService from './userService';
 
-export const addMower = async (mowerData: Omit<Mower, 'id' | 'createdAt' | 'updatedAt' | 'totalHours'>) => {
+/**
+ * The database stores uids for `lastResetBy`. Resolve them to display names
+ * from the shared user directory at read time so the UI stays readable while
+ * employees only ever read the restricted `users` collection as owners/admins.
+ */
+const resolveIntervalPerformerNames = async (intervals: ServiceInterval[]): Promise<ServiceInterval[]> => {
+  const uids = Array.from(new Set(
+    intervals
+      .map(interval => interval.lastResetBy)
+      .filter((uid): uid is string => Boolean(uid))
+  ));
+
+  if (uids.length === 0) {
+    return intervals;
+  }
+
+  try {
+    const directory = await userService.getEmployeeDirectory(uids);
+    const nameByUid = new Map(directory.map(entry => [entry.id, entry.name]));
+
+    return intervals.map(interval =>
+      interval.lastResetBy
+        ? { ...interval, lastResetBy: nameByUid.get(interval.lastResetBy) ?? interval.lastResetBy }
+        : interval
+    );
+  } catch (error) {
+    // Display-name resolution is best-effort: never block the equipment list
+    // because the directory could not be read.
+    console.error('Could not resolve service performer names:', error);
+    return intervals;
+  }
+};
+
+export const addMower = async (mowerData: NewMowerInput) => {
   const mowerToAdd = {
     ...mowerData,
     totalHours: 0,
@@ -64,10 +97,12 @@ export const getAllMowers = async () => {
     );
     
     const serviceIntervalsSnapshot = await getDocs(serviceIntervalsQuery);
-    mower.serviceIntervals = serviceIntervalsSnapshot.docs.map(doc => ({
+    const intervals = serviceIntervalsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as ServiceInterval[];
+
+    mower.serviceIntervals = await resolveIntervalPerformerNames(intervals);
   }
   
   return mowers;
@@ -90,10 +125,12 @@ export const getMowerById = async (mowerId: string) => {
     );
     
     const serviceIntervalsSnapshot = await getDocs(serviceIntervalsQuery);
-    mower.serviceIntervals = serviceIntervalsSnapshot.docs.map(doc => ({
+    const intervals = serviceIntervalsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as ServiceInterval[];
+
+    mower.serviceIntervals = await resolveIntervalPerformerNames(intervals);
     
     return mower;
   }
@@ -139,19 +176,16 @@ export const deleteMower = async (mowerId: string) => {
 };
 
 export const logMowerUsage = async (mowerId: string, hoursUsed: number) => {
-  const mowerRef = doc(db, 'mowers', mowerId);
-  const mowerSnap = await getDoc(mowerRef);
-  
-  if (mowerSnap.exists()) {
-    const mowerData = mowerSnap.data();
-    const currentHours = mowerData.totalHours || 0;
-    const newTotalHours = currentHours + hoursUsed;
-    
-    await updateDoc(mowerRef, {
-      totalHours: newTotalHours,
-      updatedAt: serverTimestamp()
-    });
+  if (typeof hoursUsed !== 'number' || !Number.isFinite(hoursUsed) || hoursUsed <= 0) {
+    throw new Error('hoursUsed must be a positive number');
   }
+
+  // Atomic increment instead of read-then-set, and only the fields the
+  // hardened mowers rule allows employees to update.
+  await updateDoc(doc(db, 'mowers', mowerId), {
+    totalHours: increment(hoursUsed),
+    updatedAt: serverTimestamp()
+  });
 };
 
 export const getMowersNeedingService = async () => {
@@ -182,27 +216,64 @@ export const resetServiceInterval = async (mowerId: string, serviceIntervalId: s
   
   const mowerData = mowerSnap.data();
   const currentHours = mowerData.totalHours || 0;
-  
-  // Get user name
-  const user = await userService.getUserById(userId);
-  const userName = user?.name || userId;
+
+  // Store the caller's uid (never a display name) for audit purposes.
+  // Names are resolved at read time from userDirectory.
+  const performedBy = auth.currentUser?.uid || userId;
   
   // Update the service interval
   const intervalRef = doc(db, 'serviceIntervals', serviceIntervalId);
   await updateDoc(intervalRef, {
     lastResetHours: currentHours,
     lastResetDate: serverTimestamp(),
-    lastResetBy: userName
+    lastResetBy: performedBy
   });
   
   // Log the service
   await addDoc(collection(db, 'serviceLogs'), {
     mowerId,
     serviceIntervalId,
-    performedBy: userName,
+    performedBy,
     hoursAtService: currentHours,
     date: serverTimestamp(),
   });
+};
+
+/**
+ * Reads the service history for a mower and resolves `performedBy` (stored
+ * uid) to a display name for the UI.
+ */
+export const getServiceLogsForMower = async (mowerId: string): Promise<ServiceLog[]> => {
+  const q = query(
+    collection(db, 'serviceLogs'),
+    where('mowerId', '==', mowerId)
+  );
+
+  const snapshot = await getDocs(q);
+  const logs = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as ServiceLog[];
+
+  logs.sort((a, b) => (b.date?.toMillis?.() ?? 0) - (a.date?.toMillis?.() ?? 0));
+
+  const uids = Array.from(new Set(logs.map(log => log.performedBy).filter(Boolean)));
+  if (uids.length === 0) {
+    return logs;
+  }
+
+  try {
+    const directory = await userService.getEmployeeDirectory(uids);
+    const nameByUid = new Map(directory.map(entry => [entry.id, entry.name]));
+
+    return logs.map(log => ({
+      ...log,
+      performedByName: nameByUid.get(log.performedBy)
+    }));
+  } catch (error) {
+    console.error('Could not resolve service log performer names:', error);
+    return logs;
+  }
 };
 
 export const addServiceInterval = async (mowerId: string, intervalData: { description: string; hourInterval: number }) => {
@@ -217,6 +288,6 @@ export const addServiceInterval = async (mowerId: string, intervalData: { descri
   });
 };
 
-export const deleteServiceInterval = async (mowerId: string, intervalId: string) => {
+export const deleteServiceInterval = async (_mowerId: string, intervalId: string) => {
   await deleteDoc(doc(db, 'serviceIntervals', intervalId));
 };

@@ -5,10 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Users, ChevronDown, CheckCircle2, UserPlus, UserMinus } from 'lucide-react';
-import { User } from '@/types';
+import { UserDirectoryEntry } from '@/types';
 
 interface EmployeeSelectorProps {
-  employees: User[];
+  employees: UserDirectoryEntry[];
   selectedEmployees: string[];
   onEmployeeToggle: (employeeId: string) => void;
   isOpen?: boolean;
@@ -122,11 +122,6 @@ export const EmployeeSelector = React.memo(({
                         isSelected ? 'text-primary' : ''
                       }`}>
                         {employee.name}
-                      </p>
-                      <p className={`text-sm truncate transition-colors duration-200 ${
-                        isSelected ? 'text-primary/70' : 'text-muted-foreground'
-                      }`}>
-                        {employee.email}
                       </p>
                     </div>
                     

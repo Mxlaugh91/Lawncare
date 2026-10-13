@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Mower, ServiceInterval } from '@/types';
+import { Mower } from '@/types';
 import * as equipmentService from '@/services/equipmentService';
 
 interface EquipmentState {

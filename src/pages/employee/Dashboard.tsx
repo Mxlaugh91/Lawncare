@@ -19,7 +19,6 @@ import { LocationWithStatus, Mower, ServiceInterval, Location } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
-import * as timeEntryService from '@/services/timeEntryService';
 import { useToast } from '@/hooks/use-toast';
 import { getISOWeekNumber } from '@/lib/utils';
 
@@ -77,22 +76,11 @@ const EmployeeDashboard = () => {
         // Get locations with weekly status for current week
         const locationsWithStatus = await locationService.getLocationsWithWeeklyStatus(currentWeek);
         
-        // Filter locations that are relevant for employees
+        // Filter locations that are relevant for employees: show everything
+        // that is due for maintenance or edge cutting this week (completed
+        // locations are shown with a status badge).
         const relevantLocations = locationsWithStatus.filter(loc => {
-          // Show locations that are due for maintenance or edge cutting this week
-          if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
-          
-          // If completed, show it
-          if (loc.status === 'fullfort') return true;
-          
-          // If not done and has tagged employees, only show if current user is tagged
-          if (loc.status === 'ikke_utfort') {
-            if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
-            return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
-          } 
-          
-          // Show planned tasks
-          return true;
+          return loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek;
         });
 
         setLocationsForCurrentWeek(relevantLocations);
@@ -151,27 +139,14 @@ const EmployeeDashboard = () => {
     }
   };
 
-  const handleLocationClick = async (location: LocationWithStatus) => {
+  const handleLocationClick = (location: LocationWithStatus) => {
     setSelectedLocation(location);
-    setLastMaintenanceEmployee(null);
-    setLastEdgeCuttingEmployee(null);
+    // Performer names are denormalized onto the location document and resolved
+    // from userDirectory when the weekly status is loaded (covering the
+    // timeEntries read restrictions for employees).
+    setLastMaintenanceEmployee(location.lastMaintenanceByName || null);
+    setLastEdgeCuttingEmployee(location.lastEdgeCuttingByName || null);
     setIsLocationModalOpen(true);
-    
-    try {
-      // Fetch latest maintenance entry
-      const latestMaintenanceEntry = await timeEntryService.getLatestTimeEntryForLocationAndType(location.id, false);
-      if (latestMaintenanceEntry) {
-        setLastMaintenanceEmployee(latestMaintenanceEntry.employeeName || null);
-      }
-      
-      // Fetch latest edge cutting entry
-      const latestEdgeCuttingEntry = await timeEntryService.getLatestTimeEntryForLocationAndType(location.id, true);
-      if (latestEdgeCuttingEntry) {
-        setLastEdgeCuttingEmployee(latestEdgeCuttingEntry.employeeName || null);
-      }
-    } catch (error) {
-      console.error('Error fetching employee names:', error);
-    }
   };
 
   const handleCloseLocationModal = () => {

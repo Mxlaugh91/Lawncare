@@ -19,11 +19,8 @@ interface LocationSelectorProps {
 export const LocationSelector = React.memo(({ 
   locations, 
   selectedLocationId, 
-  selectedLocation,
   onLocationChange,
-  edgeCuttingNeeded = false,
-  error,
-  currentWeek
+  error
 }: LocationSelectorProps) => {
   const { t } = useTranslation();
 

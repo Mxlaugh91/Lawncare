@@ -38,7 +38,7 @@ vi.mock('firebase-admin', () => {
 
 describe('processBulkNotifications Performance', () => {
   let db: admin.firestore.Firestore;
-  let batchMock: any;
+  let batchMock: admin.firestore.WriteBatch;
 
   beforeEach(() => {
     vi.clearAllMocks();

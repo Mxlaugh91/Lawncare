@@ -5,13 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UseFormRegister, FieldErrors } from 'react-hook-form';
+import { UseFormRegisterReturn } from 'react-hook-form';
+import { MAX_TIME_ENTRY_HOURS } from '@/services/timeEntryService';
 
 interface TimeEntryHoursInputProps {
   selectedHours: number;
   onQuickHourSelect: (hours: number) => void;
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+  /** Props returned by register('hours') in the parent form. */
+  hoursRegister: UseFormRegisterReturn;
+  hoursError?: string;
 }
 
 const quickHours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
@@ -19,8 +21,8 @@ const quickHours = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 export const TimeEntryHoursInput = React.memo(({ 
   selectedHours, 
   onQuickHourSelect, 
-  register, 
-  errors 
+  hoursRegister,
+  hoursError
 }: TimeEntryHoursInputProps) => {
   const { t } = useTranslation();
 
@@ -62,15 +64,16 @@ export const TimeEntryHoursInput = React.memo(({
             id="hours"
             type="number"
             step="0.25"
-            min="0.25"
+            min="0"
+            max={MAX_TIME_ENTRY_HOURS}
             placeholder={t('timeEntry.timeUsedPlaceholder')}
             className="h-14 text-lg border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-            {...register('hours')}
+            {...hoursRegister}
           />
-          {errors.hours && (
+          {hoursError && (
             <p className="text-sm text-destructive flex items-center animate-in slide-in-from-left-2 duration-300">
               <AlertCircle className="mr-2 h-4 w-4" />
-              {errors.hours.message}
+              {hoursError}
             </p>
           )}
         </div>

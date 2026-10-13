@@ -7,6 +7,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, Calendar } from 'lucide-react';
 import { TimeEntry } from '@/types';
 
+/** Values accepted by [formatDate]: Firestore timestamps, Dates or parseable strings. */
+type DateLike = { toDate: () => Date } | Date | string | number;
+
 interface LocationHistoricalNotesProps {
   timeEntries: TimeEntry[];
   loading: boolean;
@@ -29,9 +32,9 @@ export const LocationHistoricalNotes: React.FC<LocationHistoricalNotesProps> = (
       }));
   };
 
-  const formatDate = (date: any) => {
+  const formatDate = (date: DateLike) => {
     if (!date) return '';
-    const dateObj = date.toDate ? date.toDate() : new Date(date);
+    const dateObj = typeof date === 'object' && 'toDate' in date ? date.toDate() : new Date(date);
     return new Intl.DateTimeFormat('no-NO', {
       day: '2-digit',
       month: '2-digit',

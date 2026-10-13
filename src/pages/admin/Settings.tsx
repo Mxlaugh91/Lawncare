@@ -55,7 +55,8 @@ const AdminSettings = () => {
       console.error('Error saving settings:', error);
       toast({
         title: 'Feil',
-        description: 'Kunne ikke lagre innstillinger. Prøv igjen senere.',
+        // Surface validation messages (invalid weeks / start >= end) when available.
+        description: error instanceof Error ? error.message : 'Kunne ikke lagre innstillinger. Prøv igjen senere.',
         variant: 'destructive',
       });
     } finally {

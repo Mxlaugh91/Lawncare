@@ -1,5 +1,4 @@
 // vite.config.ts - Med automatisk versjonering og autoUpdate
-import path from 'path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -20,7 +19,7 @@ function getVersion() {
     
     // Format: 1v_a1b2c3d_1698765432000
     return `${commitCount}v_${gitHash}_${timestamp}`;
-  } catch (error) {
+  } catch {
     // Fallback hvis git ikke er tilgjengelig
     console.warn('Git ikke tilgjengelig, bruker fallback versjon');
     return `dev_${Date.now()}`;
@@ -38,7 +37,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate', // Endret fra 'prompt' til 'autoUpdate'
+      // Single PWA update strategy: automatic takeover.
+      // src/sw.js calls self.skipWaiting() + clients.claim() and the page
+      // (src/components/PwaUpdater.tsx) reloads once on 'controllerchange'.
+      registerType: 'autoUpdate',
       injectRegister: 'auto',
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -48,7 +50,6 @@ export default defineConfig({
         globPatterns: [
           'index.html',
           '**/*.{js,css}',
-          'favicon.ico',
           'icons/icon-192x192.png',
         ],
         globIgnores: [
@@ -64,13 +65,12 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
       },
       
-      includeAssets: ['favicon.ico'],
-      
       manifest: {
         id: '/Lawncare/',
         name: 'PlenPilot',
         short_name: 'PlenPilot',
         description: 'A maintenance management application for lawn care.',
+        // Keep in sync with <meta name="theme-color"> in index.html.
         theme_color: '#22c55e',
         background_color: '#f8fafc',
         display: 'standalone',

@@ -5,7 +5,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // Import translation files
 import noTranslations from './locales/no.json';
 import plTranslations from './locales/pl.json';
-import uaTranslations from './locales/ua.json';
+import ukTranslations from './locales/uk.json';
 
 const resources = {
   no: {
@@ -14,8 +14,30 @@ const resources = {
   pl: {
     translation: plTranslations
   },
-  ua: {
-    translation: uaTranslations
+  uk: {
+    translation: ukTranslations
+  }
+};
+
+// Ukrainian is "uk" (a valid BCP-47 tag). Older builds cached the invalid "ua"
+// code in localStorage, so migrate it once before detection runs.
+if (typeof localStorage !== 'undefined') {
+  try {
+    const cached = localStorage.getItem('i18nextLng');
+    if (cached === 'ua' || cached?.startsWith('ua-')) {
+      localStorage.setItem('i18nextLng', 'uk');
+    }
+  } catch {
+    // Ignore storage errors (private mode, disabled cookies, ...).
+  }
+}
+
+// Keep <html lang> in sync with the language that is actually used.
+const syncDocumentLanguage = () => {
+  if (typeof document === 'undefined') return;
+  const resolved = i18n.resolvedLanguage;
+  if (resolved) {
+    document.documentElement.lang = resolved;
   }
 };
 
@@ -24,6 +46,10 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
+    // Valid, supported language tags. nonExplicitSupportedLngs lets region
+    // variants such as "uk-UA" fall back to the base language "uk".
+    supportedLngs: ['no', 'pl', 'uk'],
+    nonExplicitSupportedLngs: true,
     fallbackLng: 'no', // Default to Norwegian
     debug: false,
     
@@ -41,6 +67,12 @@ i18n
     // Namespace configuration
     defaultNS: 'translation',
     ns: ['translation'],
+  })
+  .then(syncDocumentLanguage)
+  .catch((error) => {
+    console.error('i18n initialization failed:', error);
   });
+
+i18n.on('languageChanged', syncDocumentLanguage);
 
 export default i18n;

@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'functions/lib'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -23,6 +23,30 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+    },
+  },
+  {
+    // Plain JavaScript files, including the service worker in src/sw.js.
+    extends: [js.configs.recommended],
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        ...globals.serviceworker,
+        // Replaced by Vite's `define` at build time (see vite.config.ts).
+        __VERSION__: 'readonly',
+      },
+    },
+  },
+  {
+    // Tooling config files at the repository root are executed by Node.
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
     },
   }
 );

@@ -1,0 +1,7 @@
+# pnpm settings for the standalone functions package.
+# pnpm 10+ blocks dependency build scripts by default; these are the
+# transitive dependencies that need their postinstall step to be usable.
+allowBuilds:
+  "@firebase/util": true
+  "esbuild": true
+  "protobufjs": true
