@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +15,49 @@ import { Notification } from '@/types';
 import * as notificationService from '@/services/notificationService';
 import { TimeEntryDialog } from './TimeEntryDialog';
 
+/**
+ * In-app notification text is rendered from i18n keys derived from `type` and
+ * `data` so it follows the active language. The stored title/message remain
+ * the fallback for types without a template (for example 'general') and for
+ * legacy documents that predate the machine-readable fields.
+ */
+const NOTIFICATION_TITLE_KEYS: Partial<Record<Notification['type'], string>> = {
+  job_tagged: 'notifications.jobTagged',
+  time_entry_reminder: 'notifications.timeEntryReminder',
+  manual_job_reminder: 'notifications.manualJobReminder',
+  service_needed: 'notifications.serviceNeeded',
+};
+
+const getNotificationTitle = (t: TFunction, notification: Notification): string => {
+  const key = NOTIFICATION_TITLE_KEYS[notification.type];
+  return key ? t(key) : notification.title;
+};
+
+const getNotificationMessage = (t: TFunction, notification: Notification): string => {
+  const { type, data } = notification;
+
+  switch (type) {
+    case 'job_tagged': {
+      const location = data?.locationName;
+      return location
+        ? t('notifications.jobTaggedDescription', { location })
+        : notification.message;
+    }
+    case 'time_entry_reminder': {
+      const count = data?.pendingEntries;
+      return typeof count === 'number'
+        ? t('notifications.timeEntryReminderDescription', { count })
+        : notification.message;
+    }
+    case 'manual_job_reminder':
+      return t('notifications.manualJobReminderDescription');
+    case 'service_needed':
+      return t('notifications.serviceNeededDescription');
+    default:
+      return notification.message;
+  }
+};
+
 export function NotificationBell() {
   const { currentUser } = useAuth();
   const { t } = useTranslation();
@@ -21,19 +65,19 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
-  const fetchNotifications = async () => {
-    if (!currentUser) return;
-    
-    try {
-      const unreadNotifications = await notificationService.getUnreadNotifications(currentUser.uid);
-      setNotifications(unreadNotifications);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
+    if (!currentUser) {
+      setNotifications([]);
+      return;
+    }
+
+    // Live unread list: keeps the badge and the dropdown current without a reload.
+    const unsubscribe = notificationService.subscribeToUnreadNotifications(
+      currentUser.uid,
+      setNotifications
+    );
+
+    return unsubscribe;
   }, [currentUser]);
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -67,11 +111,11 @@ export function NotificationBell() {
   const handleCloseDialog = () => {
     setSelectedNotification(null);
     setIsOpen(false);
-    // Refresh notifications after closing the dialog
-    fetchNotifications();
   };
 
-  const formatNotificationTime = (date: Date) => {
+  const formatNotificationTime = (date?: Date | null) => {
+    if (!date) return '';
+
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
@@ -125,12 +169,12 @@ export function NotificationBell() {
                 >
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{notification.title}</span>
+                      <span className="font-medium">{getNotificationTitle(t, notification)}</span>
                       <span className="text-xs text-muted-foreground">
-                        {formatNotificationTime(notification.createdAt.toDate())}
+                        {formatNotificationTime(notification.createdAt?.toDate?.())}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                    <p className="text-sm text-muted-foreground">{getNotificationMessage(t, notification)}</p>
                   </div>
                 </DropdownMenuItem>
               ))
@@ -143,10 +187,10 @@ export function NotificationBell() {
         <TimeEntryDialog
           isOpen={true}
           onClose={handleCloseDialog}
-          onSuccess={fetchNotifications}
+          notification={selectedNotification}
           notificationId={selectedNotification.id}
           locationId={selectedNotification.data.locationId!}
-          locationName={selectedNotification.data.locationName!}
+          locationName={selectedNotification.data.locationName || ''}
         />
       )}
     </>

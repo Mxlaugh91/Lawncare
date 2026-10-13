@@ -31,14 +31,14 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   const [loadingLocation, setLoadingLocation] = useState(true);
 
   // Use custom hook for time entries
-  const { timeEntries: locationTimeEntries, loading: loadingTimeEntries, error: timeEntriesError, refetch: refetchTimeEntries } = useLocationTimeEntries(id);
+  const { timeEntries: locationTimeEntries, loading: loadingTimeEntries } = useLocationTimeEntries(id);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(isNew || false);
 
   // Modal state for TimeEntryDetailsModal
   const [isTimeEntryModalOpen, setIsTimeEntryModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  const [modalData, setModalData] = useState<any[]>([]);
+  const [modalData, setModalData] = useState<unknown[]>([]);
   const [modalType, setModalType] = useState<'timeEntries' | 'employees' | 'edgeCutting' | 'notes'>('timeEntries');
 
   // Fetch location from Zustand store or service if not found
@@ -151,7 +151,7 @@ const AdminLocations = ({ isNew }: LocationsProps) => {
   // Memoized callback for card clicks to open modals
   const handleCardClick = useCallback((type: 'timeEntries' | 'employees' | 'edgeCutting' | 'notes') => {
     let title = '';
-    let data: any[] = [];
+    let data: unknown[] = [];
 
     // Helper functions for data aggregation (moved from original Locations.tsx)
     const getUniqueEmployees = () => {

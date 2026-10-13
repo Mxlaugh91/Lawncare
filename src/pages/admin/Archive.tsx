@@ -79,6 +79,20 @@ const AdminArchive = () => {
     }).format(date);
   };
 
+  // Guard against missing/malformed timestamps so one bad document cannot
+  // blank the whole archive route.
+  const formatTimestamp = (value: unknown) => {
+    if (!value) return '-';
+    const maybeTimestamp = value as { toDate?: () => Date };
+    if (typeof maybeTimestamp.toDate !== 'function') return '-';
+    try {
+      return formatDate(maybeTimestamp.toDate());
+    } catch (error) {
+      console.error('Could not read timestamp:', error);
+      return '-';
+    }
+  };
+
   const handleRestore = async (locationId: string) => {
     try {
       await locationService.restoreLocation(locationId);
@@ -216,10 +230,10 @@ const AdminArchive = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {formatDate(location.updatedAt.toDate())}
+                          {formatTimestamp(location.updatedAt)}
                         </TableCell>
                         <TableCell>
-                          {formatDate(location.createdAt.toDate())}
+                          {formatTimestamp(location.createdAt)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">Arkivert</Badge>

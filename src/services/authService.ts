@@ -17,7 +17,7 @@ export const loginWithEmailAndPassword = async (email: string, password: string)
       user: userCredential.user,
       role: userDoc.exists() ? userDoc.data().role : null
     };
-  } catch (error) {
+  } catch {
     throw new Error('Innlogging mislyktes. Sjekk e-post og passord.');
   }
 };
@@ -25,7 +25,7 @@ export const loginWithEmailAndPassword = async (email: string, password: string)
 export const logoutUser = async () => {
   try {
     await firebaseSignOut(auth);
-  } catch (error) {
+  } catch {
     throw new Error('Kunne ikke logge ut. Prøv igjen senere.');
   }
 };
@@ -57,7 +57,7 @@ export const createUserAccount = async (
     });
 
     return user;
-  } catch (error) {
+  } catch {
     throw new Error('Kunne ikke opprette bruker. Prøv igjen senere.');
   }
 };
@@ -70,7 +70,7 @@ export const getUserRole = async (userId: string) => {
   try {
     const userDoc = await getDoc(doc(db, 'users', userId));
     return userDoc.exists() ? userDoc.data().role : null;
-  } catch (error) {
+  } catch {
     throw new Error('Kunne ikke hente brukerrolle.');
   }
 };

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Location, Mower, User } from '@/types';
+import { Location, Mower, UserDirectoryEntry } from '@/types';
 import * as locationService from '@/services/locationService';
 import * as equipmentService from '@/services/equipmentService';
 import * as timeEntryService from '@/services/timeEntryService';
@@ -43,7 +43,7 @@ const TimeEntry = () => {
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [mowers, setMowers] = useState<Mower[]>([]);
-  const [employees, setEmployees] = useState<User[]>([]);
+  const [employees, setEmployees] = useState<UserDirectoryEntry[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [edgeCuttingNeeded, setEdgeCuttingNeeded] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
@@ -60,11 +60,19 @@ const TimeEntry = () => {
     }),
     hours: z.coerce.number({
       required_error: t('timeEntry.hoursRequired'),
-    }).min(0.1, t('timeEntry.hoursMinimum')),
+    })
+      .gt(0, t('timeEntry.hoursMinimum'))
+      .max(timeEntryService.MAX_TIME_ENTRY_HOURS, {
+        message: t('timeEntry.hoursMaximum', { defaultValue: 'Tidsbruk kan ikke overstige 24 timer' }),
+      }),
     mowerId: z.string().nullable(),
     edgeCuttingDone: z.boolean().default(false),
     notes: z.string().optional(),
-    taggedEmployeeIds: z.array(z.string()).optional(),
+    taggedEmployeeIds: z.array(z.string())
+      .max(timeEntryService.MAX_TAGGED_EMPLOYEES, {
+        message: t('timeEntry.tooManyTaggedEmployees', { defaultValue: 'Maks 20 kollegaer kan tagges per jobb' }),
+      })
+      .optional(),
   });
 
   const {
@@ -99,11 +107,8 @@ const TimeEntry = () => {
         
         const availableLocations = locationsWithStatus.filter(loc => {
           if (!(loc.isDueForMaintenanceInSelectedWeek || loc.isDueForEdgeCuttingInSelectedWeek)) return false;
+          // Hide locations where every task due this week is already completed.
           if (loc.status === 'fullfort') return false;
-          if (loc.status === 'ikke_utfort') {
-            if (!loc.taggedEmployees || loc.taggedEmployees.length === 0) return false;
-            return loc.taggedEmployees.some(emp => emp.id === currentUser?.uid);
-          } 
           return true;
         }).map(loc => ({
           id: loc.id,
@@ -121,14 +126,16 @@ const TimeEntry = () => {
           isDueForEdgeCuttingInSelectedWeek: loc.isDueForEdgeCuttingInSelectedWeek,
         }));
 
+        // Employee names come from the shared userDirectory collection:
+        // regular employees cannot read the restricted `users` collection.
         const [mowerData, employeeData] = await Promise.all([
           equipmentService.getAllMowers(),
-          userService.getAllEmployees()
+          userService.getEmployeeDirectory()
         ]);
         
         setLocations(availableLocations);
         setMowers(mowerData);
-        setEmployees(employeeData.filter(emp => emp.id !== currentUser?.uid));
+        setEmployees(employeeData.filter(emp => emp.role === 'employee' && emp.id !== currentUser?.uid));
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -171,6 +178,11 @@ const TimeEntry = () => {
       if (isSelected) {
         return prev.filter(id => id !== employeeId);
       } else {
+        // Tagged employees are capped at MAX_TAGGED_EMPLOYEES to satisfy the
+        // hardened timeEntries rules.
+        if (prev.length >= timeEntryService.MAX_TAGGED_EMPLOYEES) {
+          return prev;
+        }
         return [...prev, employeeId];
       }
     });
@@ -216,27 +228,39 @@ const TimeEntry = () => {
       const timeEntryId = await timeEntryService.addTimeEntry({
         ...data,
         employeeId: currentUser.uid,
-        employeeName: currentUser.displayName || currentUser.email || 'Ukjent',
         date: Timestamp.fromDate(new Date()),
         taggedEmployeeIds: selectedEmployees,
       });
       
+      // Tagging notifications are best-effort. The time entry is already saved,
+      // so a failed notification must not surface as a save error (which would
+      // make the user retry and create a duplicate entry).
       if (selectedEmployees.length > 0 && timeEntryId) {
         const location = locations.find(loc => loc.id === data.locationId);
-        
-        await Promise.all(selectedEmployees.map(employeeId =>
-          notificationService.addNotification({
-            userId: employeeId,
-            title: 'Du har blitt tagget i en jobb',
-            message: `Du har blitt tagget i en jobb på ${location?.name}`,
-            type: 'job_tagged',
-            data: {
-              locationId: data.locationId,
-              locationName: location?.name,
-              timeEntryId: timeEntryId
-            }
-          })
-        ));
+
+        try {
+          const results = await Promise.allSettled(selectedEmployees.map(employeeId =>
+            notificationService.addNotification({
+              userId: employeeId,
+              title: 'Du har blitt tagget i en jobb',
+              message: `Du har blitt tagget i en jobb på ${location?.name}`,
+              type: 'job_tagged',
+              data: {
+                locationId: data.locationId,
+                locationName: location?.name,
+                // Required by the hardened notifications rules: identifies the
+                // entry whose tagging caused this notification.
+                timeEntryId
+              }
+            })
+          ));
+
+          results
+            .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+            .forEach(result => console.error('Could not create tagging notification:', result.reason));
+        } catch (notificationError) {
+          console.error('Could not create tagging notifications:', notificationError);
+        }
       }
       
       toast({
@@ -279,7 +303,11 @@ const TimeEntry = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="space-y-6 p-4 pb-24 md:pb-8 max-w-2xl mx-auto">
+      {/* Wrapped in a form so pressing Enter submits the time entry */}
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-6 p-4 pb-24 md:pb-8 max-w-2xl mx-auto"
+      >
         {/* Header */}
         <TimeEntryHeader currentWeek={currentWeek} weekDates={weekDates} />
 
@@ -303,8 +331,8 @@ const TimeEntry = () => {
             <TimeEntryHoursInput
               selectedHours={selectedHours}
               onQuickHourSelect={handleQuickHourSelect}
-              register={register}
-              errors={errors}
+              hoursRegister={register('hours')}
+              hoursError={typeof errors.hours?.message === 'string' ? errors.hours.message : undefined}
             />
           )}
 
@@ -343,19 +371,16 @@ const TimeEntry = () => {
             <TimeEntryNotes
               isOpen={isNotesSectionOpen}
               onOpenChange={setIsNotesSectionOpen}
-              register={register}
+              notesRegister={register('notes')}
             />
           )}
 
           {/* Submit Button */}
           {selectedLocation && (
-            <TimeEntrySubmitButton
-              isSubmitting={isSubmitting}
-              onSubmit={handleSubmit(onSubmit)}
-            />
+            <TimeEntrySubmitButton isSubmitting={isSubmitting} />
           )}
         </div>
-      </div>
+      </form>
     </div>
   );
 };

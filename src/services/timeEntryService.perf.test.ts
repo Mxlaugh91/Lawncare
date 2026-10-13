@@ -21,18 +21,18 @@ vi.mock('firebase/firestore', () => ({
 
 // Mock services
 vi.mock('./locationService', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import('./locationService')>();
   return {
-    ...actual as any,
+    ...actual,
     getLocationById: vi.fn(),
     getLocationsByIds: vi.fn(),
   };
 });
 
 vi.mock('./userService', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import('./userService')>();
   return {
-    ...actual as any,
+    ...actual,
     getUserById: vi.fn(),
     getUsersByIds: vi.fn(),
   };
@@ -55,15 +55,17 @@ describe('getRecentTimeEntries Performance', () => {
       })
     }));
 
-    (getDocs as any).mockResolvedValue({
+    vi.mocked(getDocs).mockResolvedValue({
       docs: mockDocs,
       empty: false
-    });
+    } as Awaited<ReturnType<typeof getDocs>>);
 
-    (locationService.getLocationsByIds as any).mockResolvedValue(
-      mockDocs.map((_, i) => ({ id: `loc-${i}`, name: `Location ${i}` }))
+    vi.mocked(locationService.getLocationsByIds).mockResolvedValue(
+      mockDocs.map((_, i) => ({ id: `loc-${i}`, name: `Location ${i}` })) as unknown as Awaited<
+        ReturnType<typeof locationService.getLocationsByIds>
+      >
     );
-    (userService.getUsersByIds as any).mockResolvedValue(
+    vi.mocked(userService.getUsersByIds).mockResolvedValue(
       mockDocs.map((_, i) => ({ id: `emp-${i}`, name: `User ${i}` }))
     );
 

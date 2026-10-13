@@ -1,4 +1,4 @@
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
@@ -10,6 +10,12 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+// Firestore caps a single write batch at 500 operations.
+const FIRESTORE_BATCH_LIMIT = 500;
+
+// Maximum number of unique recipients accepted by a single sendBulkNotifications call.
+const MAX_BULK_RECIPIENTS = 500;
 
 // Define types for better type safety
 interface Notification {
@@ -94,8 +100,6 @@ export const sendPushNotification = onDocumentCreated(
           body: message,
         },
         data: {
-          notificationId: notificationId,
-          type: type || 'general',
           ...(customData && typeof customData === 'object' ? 
             Object.fromEntries(
               Object.entries(customData).map(([key, value]) => [
@@ -103,7 +107,10 @@ export const sendPushNotification = onDocumentCreated(
                 typeof value === 'string' ? value : JSON.stringify(value)
               ])
             ) : {}
-          )
+          ),
+          // System keys are set after customData so they cannot be overridden.
+          notificationId: notificationId,
+          type: type || 'general',
         },
         // Android specific options
         android: {
@@ -240,10 +247,23 @@ export const sendBulkNotifications = onCall<BulkNotificationData>(
     }
 
     try {
-      const { userIds, title, message, type, customData } = request.data;
+      const { userIds: rawUserIds, title, message, type, customData } = request.data;
 
-      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      if (!rawUserIds || !Array.isArray(rawUserIds) || rawUserIds.length === 0) {
         throw new Error('userIds must be a non-empty array');
+      }
+
+      // De-duplicate and cap the recipient list so a single call cannot fan out indefinitely.
+      const userIds = Array.from(
+        new Set(rawUserIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0))
+      );
+
+      if (userIds.length === 0) {
+        throw new Error('userIds must contain at least one non-empty string');
+      }
+
+      if (userIds.length > MAX_BULK_RECIPIENTS) {
+        throw new Error(`userIds must contain at most ${MAX_BULK_RECIPIENTS} unique recipients`);
       }
 
       if (!title || !message) {
@@ -332,31 +352,139 @@ export const cleanupOldNotifications = onSchedule(
     timeZone: 'Europe/Oslo'
   },
   async () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoff = admin.firestore.Timestamp.fromDate(thirtyDaysAgo);
+
+    let totalDeleted = 0;
+
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      // Firestore caps a batch at 500 writes, so delete in pages until no
+      // stale notifications remain instead of committing one giant batch.
+      for (;;) {
+        const snapshot = await db
+          .collection('notifications')
+          .where('createdAt', '<', cutoff)
+          .limit(FIRESTORE_BATCH_LIMIT)
+          .get();
 
-      const oldNotificationsQuery = db
-        .collection('notifications')
-        .where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo));
+        if (snapshot.empty) {
+          break;
+        }
 
-      const snapshot = await oldNotificationsQuery.get();
-      
-      if (snapshot.empty) {
-        console.log('No old notifications to clean up');
-        return;
+        const batch = db.batch();
+        snapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        totalDeleted += snapshot.size;
+        console.log(`Deleted ${snapshot.size} old notifications (${totalDeleted} total this run)`);
       }
 
-      const batch = db.batch();
-      snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-
-      await batch.commit();
-      console.log(`Successfully deleted ${snapshot.size} old notifications`);
-
+      if (totalDeleted === 0) {
+        console.log('No old notifications to clean up');
+      } else {
+        console.log(`Successfully deleted ${totalDeleted} old notifications`);
+      }
     } catch (error) {
-      console.error('Error cleaning up old notifications:', error);
+      // Re-throw so the failure is visible in Cloud Logging and the next run can retry.
+      console.error(`Error cleaning up old notifications after deleting ${totalDeleted} documents:`, error);
+      throw error;
     }
   }
 );
+
+/**
+ * Shapes a users document into the exact fields mirrored in userDirectory.
+ */
+function buildUserDirectoryEntry(user: Record<string, unknown>): {
+  name: string;
+  role: string;
+  updatedAt: admin.firestore.FieldValue;
+} {
+  return {
+    name: typeof user.name === 'string' ? user.name : '',
+    role: typeof user.role === 'string' ? user.role : '',
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+}
+
+/**
+ * Keeps the userDirectory mirror collection in sync with the users collection.
+ * The mirror only contains { name, role, updatedAt } so client reads can be locked down.
+ */
+export const syncUserDirectory = onDocumentWritten(
+  'users/{userId}',
+  async (event) => {
+    const userId = event.params.userId;
+
+    const after = event.data?.after;
+    if (!after) {
+      console.error('syncUserDirectory: no event data for user', userId);
+      return;
+    }
+
+    const userDirectoryRef = db.collection('userDirectory').doc(userId);
+
+    // User document deleted: remove the mirror document as well.
+    if (!after.exists) {
+      await userDirectoryRef.delete();
+      console.log(`Removed userDirectory entry for deleted user ${userId}`);
+      return;
+    }
+
+    await userDirectoryRef.set(buildUserDirectoryEntry(after.data() ?? {}));
+    console.log(`Synced userDirectory entry for user ${userId}`);
+  }
+);
+
+/**
+ * Admin-only callable that backfills the userDirectory mirror for users that
+ * existed before syncUserDirectory was deployed. Safe to re-run (idempotent).
+ */
+export const backfillUserDirectory = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error('User must be authenticated');
+  }
+
+  const callerDoc = await db.collection('users').doc(request.auth.uid).get();
+  if (callerDoc.data()?.role !== 'admin') {
+    throw new Error('Only admins can backfill the user directory');
+  }
+
+  let lastUserId: string | undefined;
+  let totalSynced = 0;
+
+  for (;;) {
+    let usersQuery: admin.firestore.Query = db
+      .collection('users')
+      .orderBy(admin.firestore.FieldPath.documentId())
+      .limit(FIRESTORE_BATCH_LIMIT);
+
+    if (lastUserId) {
+      usersQuery = usersQuery.startAfter(lastUserId);
+    }
+
+    const snapshot = await usersQuery.get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((userDoc) => {
+      batch.set(db.collection('userDirectory').doc(userDoc.id), buildUserDirectoryEntry(userDoc.data()));
+    });
+    await batch.commit();
+
+    totalSynced += snapshot.size;
+    lastUserId = snapshot.docs[snapshot.docs.length - 1].id;
+
+    if (snapshot.size < FIRESTORE_BATCH_LIMIT) {
+      break;
+    }
+  }
+
+  console.log(`Backfilled ${totalSynced} userDirectory entries`);
+  return { success: true, usersSynced: totalSynced };
+});

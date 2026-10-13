@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { Mower } from '@/types';
+import { Mower, NewMowerInput } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import * as equipmentService from '@/services/equipmentService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +14,7 @@ import { AddMowerDialog } from '@/components/admin/equipment/AddMowerDialog';
 import { AddIntervalDialog } from '@/components/admin/equipment/AddIntervalDialog';
 
 const AdminEquipment = () => {
+  const { currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [mowers, setMowers] = useState<Mower[]>([]);
@@ -64,7 +66,7 @@ const AdminEquipment = () => {
     setFilteredMowers(updatedMowers);
   };
 
-  const handleAddMower = async (data: any) => {
+  const handleAddMower = async (data: NewMowerInput) => {
     try {
       await equipmentService.addMower(data);
       
@@ -86,7 +88,8 @@ const AdminEquipment = () => {
 
   const handleServiceReset = async (mowerId: string, intervalId: string) => {
     try {
-      await equipmentService.resetServiceInterval(mowerId, intervalId, 'current-user');
+      // serviceLogs.performedBy must be the caller uid (hardened rules).
+      await equipmentService.resetServiceInterval(mowerId, intervalId, currentUser?.uid ?? '');
       await refreshMowers();
       
       toast({

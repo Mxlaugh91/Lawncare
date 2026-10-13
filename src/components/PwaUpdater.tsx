@@ -1,39 +1,41 @@
-// src/components/PwaUpdater.tsx - Fixed PWA updater without aggressive intervals
+// src/components/PwaUpdater.tsx - PWA update strategy: automatic takeover
+//
+// Single update strategy (must stay in sync with registerType: 'autoUpdate' in
+// vite.config.ts and src/sw.js):
+//   1. the new service worker calls self.skipWaiting() + clients.claim(), so it
+//      takes control immediately;
+//   2. the page reloads exactly once when the new worker takes control
+//      ("controllerchange").
+// There is intentionally no waiting-worker / "new version available" prompt.
 
-import { useRegisterSW } from 'virtual:pwa-register/react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 function PwaUpdater() {
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegisteredSW(swUrl, registration) {
-      console.log('SW registered:', swUrl);
-      
-      // REMOVED: Aggressive 30-second interval updates that cause InvalidStateError
-      // The browser will handle update checks automatically at appropriate intervals
-    },
-    onOfflineReady() {
-      console.log('App ready for offline use');
-    },
-  });
+  // On the very first install there is no controller yet: skip the reload.
+  const hadController = useRef(
+    typeof navigator !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      !!navigator.serviceWorker.controller
+  );
 
-  // Automatic update when new version is available
   useEffect(() => {
-    if (needRefresh) {
-      console.log('New version available, updating automatically...');
-      
-      // SIMPLIFIED: Just call updateServiceWorker with reload flag
-      // The vite-plugin-pwa will handle the update and reload properly
-      updateServiceWorker(true);
-      
-      // REMOVED: Manual window.location.replace that could interfere
-      // with the plugin's built-in update mechanism
-    }
-  }, [needRefresh, updateServiceWorker]);
+    if (!hadController.current || !('serviceWorker' in navigator)) return;
 
-  // No UI - everything happens automatically in the background
+    let reloading = false;
+    const handleControllerChange = () => {
+      // Guard against reload loops if the event fires more than once.
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+    };
+  }, []);
+
+  // No UI - the update happens automatically in the background.
   return null;
 }
 

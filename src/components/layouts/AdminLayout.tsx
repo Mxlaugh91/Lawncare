@@ -5,8 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { NotificationSettingsItems } from '@/components/layouts/NotificationSettingsItems';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LayoutDashboard, FileSpreadsheet, Users, Archive, Settings, PenTool as Tool, Menu, X, LogOut, User, Globe
+  LayoutDashboard, FileSpreadsheet, Users, Archive, Settings, PenTool as Tool, Menu, X, LogOut, Globe
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -30,8 +30,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Initialize Firebase messaging
-  useFirebaseMessaging();
+  // Foreground push messages, plus the explicit opt-in control below.
+  const { permission, requestPermissionAndGetToken, clearFCMToken } = useFirebaseMessaging();
 
   const handleLogout = async () => {
     try {
@@ -135,6 +135,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                       <span>{t('navigation.settings')}</span>
                     </NavLink>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <NotificationSettingsItems
+                    permission={permission}
+                    onEnable={requestPermissionAndGetToken}
+                    onDisable={clearFCMToken}
+                  />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>{t('auth.logout')}</span>

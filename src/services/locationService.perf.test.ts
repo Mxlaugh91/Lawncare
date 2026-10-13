@@ -42,7 +42,7 @@ describe('getLocationsWithWeeklyStatus Performance', () => {
     }));
 
     let callCount = 0;
-    (getDocs as any).mockImplementation(async () => {
+    vi.mocked(getDocs).mockImplementation(async () => {
       await new Promise(resolve => setTimeout(resolve, DELAY_MS));
       callCount++;
 
@@ -51,7 +51,7 @@ describe('getLocationsWithWeeklyStatus Performance', () => {
          return {
            docs: mockLocations,
            empty: false
-         };
+         } as Awaited<ReturnType<typeof getDocs>>;
       }
 
       // Subsequent calls are time entries (and users if any)
@@ -59,7 +59,7 @@ describe('getLocationsWithWeeklyStatus Performance', () => {
       return {
         docs: [],
         empty: true
-      };
+      } as unknown as Awaited<ReturnType<typeof getDocs>>;
     });
 
     const start = Date.now();

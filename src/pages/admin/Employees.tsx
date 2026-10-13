@@ -115,12 +115,15 @@ const AdminEmployees = () => {
     try {
       setSendingReminder(employee.id);
       
-      // Send manual job reminder notification
+      // Send manual job reminder notification. The stored title/message stay
+      // Norwegian for the push path; `type` + `data` drive the localized
+      // in-app rendering.
       await notificationService.addNotification({
         userId: employee.id,
         title: 'Jobbpåminnelse fra administrator',
         message: 'Du har fått en påminnelse om å sjekke dine tildelte oppgaver og timeregistreringer.',
-        type: 'manual_job_reminder'
+        type: 'manual_job_reminder',
+        data: {}
       });
 
       toast({

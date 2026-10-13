@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/services/firebase';
-import { Location, LocationWithStatus } from '@/types';
+import { Location, LocationInput, LocationWithStatus } from '@/types';
 import * as locationService from '@/services/locationService';
 
 interface LocationState {
@@ -14,7 +14,7 @@ interface LocationState {
   initRealtimeUpdates: () => void;
   cleanup: () => void;
   fetchLocations: () => Promise<void>;
-  addLocation: (locationData: Omit<Location, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'>) => Promise<string>;
+  addLocation: (locationData: LocationInput) => Promise<string>;
   updateLocation: (locationId: string, updatedData: Partial<Location>) => Promise<void>;
   archiveLocation: (locationId: string) => Promise<void>;
   restoreLocation: (locationId: string) => Promise<void>;
@@ -78,14 +78,18 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   },
 
   addLocation: async (locationData) => {
+    // Capture the temp id once so the rollback removes the exact optimistic row.
+    const optimisticId = 'temp-' + Date.now();
+
     try {
       // Optimistically add the location
       const optimisticLocation: Location = {
-        id: 'temp-' + Date.now(),
+        id: optimisticId,
         ...locationData,
+        notes: locationData.notes ?? '',
         isArchived: false,
-        createdAt: new Date() as any,
-        updatedAt: new Date() as any,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
       };
 
       set(state => ({
@@ -98,7 +102,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
     } catch (error) {
       // Revert optimistic update on error
       set(state => ({
-        locations: state.locations.filter(loc => loc.id !== 'temp-' + Date.now()),
+        locations: state.locations.filter(loc => loc.id !== optimisticId),
         error: 'Failed to add location'
       }));
       throw error;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
@@ -19,12 +19,19 @@ interface LanguageSelectorProps {
 const languages = [
   { code: 'no', name: 'norwegian', flag: '🇳🇴' },
   { code: 'pl', name: 'polish', flag: '🇵🇱' },
-  { code: 'ua', name: 'ukrainian', flag: '🇺🇦' },
+  // "uk" is the valid language tag for Ukrainian (previously the invalid "ua").
+  { code: 'uk', name: 'ukrainian', flag: '🇺🇦' },
 ];
 
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onClose }) => {
   const { t, i18n } = useTranslation();
-  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+  const resolvedLanguage = i18n.resolvedLanguage ?? 'no';
+  const [selectedLanguage, setSelectedLanguage] = useState(resolvedLanguage);
+
+  // Keep the selection in sync when the language changes elsewhere.
+  useEffect(() => {
+    setSelectedLanguage(i18n.resolvedLanguage ?? 'no');
+  }, [i18n.resolvedLanguage]);
 
   const handleLanguageSelect = (languageCode: string) => {
     setSelectedLanguage(languageCode);
@@ -36,7 +43,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
   };
 
   const handleCancel = () => {
-    setSelectedLanguage(i18n.language); // Reset to current language
+    setSelectedLanguage(resolvedLanguage); // Reset to current language
     onClose();
   };
 
@@ -75,7 +82,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
               </div>
               
               <div className="flex items-center space-x-1">
-                {i18n.language === language.code && (
+                {resolvedLanguage === language.code && (
                   <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
                     Aktiv
                   </Badge>
@@ -101,7 +108,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ isOpen, onCl
           <Button
             size="sm"
             onClick={handleApplyLanguage}
-            disabled={selectedLanguage === i18n.language}
+            disabled={selectedLanguage === resolvedLanguage}
           >
             {t('language.apply')}
           </Button>

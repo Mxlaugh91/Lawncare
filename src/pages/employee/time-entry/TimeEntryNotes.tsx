@@ -5,18 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { UseFormRegister } from 'react-hook-form';
+import { UseFormRegisterReturn } from 'react-hook-form';
+import { MAX_TIME_ENTRY_NOTES_LENGTH } from '@/services/timeEntryService';
 
 interface TimeEntryNotesProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  register: UseFormRegister<any>;
+  /** Props returned by register('notes') in the parent form. */
+  notesRegister: UseFormRegisterReturn;
 }
 
 export const TimeEntryNotes = React.memo(({ 
   isOpen, 
   onOpenChange, 
-  register 
+  notesRegister 
 }: TimeEntryNotesProps) => {
   const { t } = useTranslation();
 
@@ -44,8 +46,9 @@ export const TimeEntryNotes = React.memo(({
           <CardContent>
             <Textarea
               placeholder={t('timeEntry.notesPlaceholder')}
+              maxLength={MAX_TIME_ENTRY_NOTES_LENGTH}
               className="min-h-[100px] resize-none border-2 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-              {...register('notes')}
+              {...notesRegister}
             />
           </CardContent>
         </CollapsibleContent>

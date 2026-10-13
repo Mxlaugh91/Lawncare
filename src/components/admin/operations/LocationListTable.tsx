@@ -9,6 +9,13 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { LocationWithStatus } from '@/types';
+import {
+  formatLatestEntryDate,
+  getEdgeCuttingStatusDisplay,
+  getLocationEmployeeSummary,
+  getLocationTotalHours,
+  getMaintenanceStatusDisplay
+} from './locationStatusDisplay';
 
 interface LocationListTableProps {
   filteredLocations: LocationWithStatus[];
@@ -16,64 +23,6 @@ interface LocationListTableProps {
 }
 
 export const LocationListTable = ({ filteredLocations, loading }: LocationListTableProps) => {
-  const getMaintenanceStatus = (location: LocationWithStatus) => {
-    if (!location.isDueForMaintenanceInSelectedWeek) {
-      return "Ikke aktuelt";
-    }
-    switch (location.status) {
-      case 'fullfort':
-        return <span className="text-primary font-medium">Fullført</span>;
-      case 'ikke_utfort':
-        return <span className="text-destructive">Ikke utført</span>;
-      default:
-        return <span className="text-amber-600">Planlagt</span>;
-    }
-  };
-
-  const getEdgeCuttingStatus = (location: LocationWithStatus) => {
-    if (!location.isDueForEdgeCuttingInSelectedWeek) {
-      return "Ikke aktuelt";
-    }
-    switch (location.status) {
-      case 'fullfort':
-        return <span className="text-primary font-medium">Fullført</span>;
-      case 'ikke_utfort':
-        return <span className="text-destructive">Ikke utført</span>;
-      default:
-        return <span className="text-amber-600">Planlagt</span>;
-    }
-  };
-
-  const getTotalHours = (location: LocationWithStatus) => {
-    if (!location.timeEntries || location.timeEntries.length === 0) {
-      return 0;
-    }
-    return location.timeEntries.reduce((total, entry) => total + entry.hours, 0);
-  };
-
-  const getEmployeeSummary = (location: LocationWithStatus) => {
-    if (!location.timeEntries || location.timeEntries.length === 0) {
-      return 'Ikke registrert';
-    }
-
-    // Get unique employee names
-    const uniqueEmployees = Array.from(
-      new Set(location.timeEntries.map(entry => entry.employeeName).filter(Boolean))
-    );
-
-    if (uniqueEmployees.length === 0) {
-      return 'Ikke registrert';
-    }
-
-    if (uniqueEmployees.length === 1) {
-      return uniqueEmployees[0];
-    }
-
-    // Show first employee + count of others
-    const additionalCount = uniqueEmployees.length - 1;
-    return `${uniqueEmployees[0]} (+${additionalCount} andre)`;
-  };
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -116,27 +65,22 @@ export const LocationListTable = ({ filteredLocations, loading }: LocationListTa
                 </div>
               </TableCell>
               <TableCell className="hidden md:table-cell">
-                {getMaintenanceStatus(location)}
+                {getMaintenanceStatusDisplay(location)}
               </TableCell>
               <TableCell className="hidden md:table-cell">
-                {getEdgeCuttingStatus(location)}
+                {getEdgeCuttingStatusDisplay(location)}
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
+                {formatLatestEntryDate(location)}
               </TableCell>
               <TableCell className="hidden lg:table-cell">
                 {location.timeEntries && location.timeEntries.length > 0 
-                  ? new Intl.DateTimeFormat('no-NO', {
-                      weekday: 'long'
-                    }).format(location.timeEntries[0].date.toDate())
-                  : 'Ikke registrert'
-                }
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                {location.timeEntries && location.timeEntries.length > 0 
-                  ? `${getTotalHours(location)} timer`
+                  ? `${getLocationTotalHours(location)} timer`
                   : '-'
                 }
               </TableCell>
               <TableCell className="hidden lg:table-cell">
-                {getEmployeeSummary(location)}
+                {getLocationEmployeeSummary(location)}
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
