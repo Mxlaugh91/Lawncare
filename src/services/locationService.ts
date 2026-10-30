@@ -9,18 +9,18 @@ import {
   query, 
   where, 
   orderBy, 
-  Timestamp, 
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Location, LocationStatus, LocationWithStatus } from '@/types';
+import { Location, LocationInput, LocationStatus, LocationWithStatus } from '@/types';
 import * as userService from './userService';
-import { getISOWeekNumber, getISOWeekDates } from '@/lib/utils';
+import { getISOWeekNumber } from '@/lib/utils';
 
-export const addLocation = async (locationData: Omit<Location, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'>) => {
+export const addLocation = async (locationData: LocationInput) => {
   try {
     const locationToAdd = {
       ...locationData,
+      notes: locationData.notes ?? '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isArchived: false,
@@ -227,185 +227,103 @@ export const getLocationsByIds = async (locationIds: string[]) => {
   }
 };
 
+/**
+ * Returns active locations with their per-type status for the selected ISO
+ * week.
+ *
+ * Weekly status is derived from the denormalized fields on the location
+ * document (`lastMaintenanceWeek`/`lastMaintenanceBy`/`lastMaintenanceAt` and
+ * the edge-cutting equivalents) because the hardened timeEntries rules only
+ * allow reading your own (or tagged) registrations - cross-employee queries
+ * against timeEntries are denied.
+ */
 export const getLocationsWithWeeklyStatus = async (weekNumber: number): Promise<LocationWithStatus[]> => {
   try {
-    console.log('🚀 Starting getLocationsWithWeeklyStatus - optimized version');
-    
     // 1. Get all active locations (1 query)
     const locationsQuery = query(
       collection(db, 'locations'),
       where('isArchived', '==', false),
       orderBy('name')
     );
-    
+
     const locationsSnapshot = await getDocs(locationsQuery);
     const locations = locationsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Location[];
 
-    console.log(`📍 Found ${locations.length} locations`);
-
     if (locations.length === 0) {
       return [];
     }
 
-    // 2. Calculate week date range for time entries
-    const { start: weekStart, end: weekEnd } = getISOWeekDates(weekNumber);
-    weekStart.setHours(0, 0, 0, 0);
-    weekEnd.setHours(23, 59, 59, 999);
+    // 2. Resolve performer display names from the shared user directory.
+    //    Best-effort: status must not depend on name resolution.
+    const performerIds = Array.from(new Set(
+      locations
+        .flatMap(location => [location.lastMaintenanceBy, location.lastEdgeCuttingBy])
+        .filter((uid): uid is string => Boolean(uid))
+    ));
 
-    // 3. Batch fetch ALL time entries for the week (chunked queries due to Firestore 'in' limit)
-    const locationIds = locations.map(loc => loc.id);
-    const locationChunks = chunkArray(locationIds, 30); // Firestore 'in' query limit is 30
-    
-    const timeEntriesPromises = locationChunks.map(async (chunk) => {
-      const timeEntriesQuery = query(
-        collection(db, 'timeEntries'),
-        where('locationId', 'in', chunk),
-        where('date', '>=', Timestamp.fromDate(weekStart)),
-        where('date', '<=', Timestamp.fromDate(weekEnd)),
-        orderBy('date', 'desc')
-      );
-      
-      const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-      return timeEntriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    });
-
-    const chunkedTimeEntries = await Promise.all(timeEntriesPromises);
-    const allTimeEntries = chunkedTimeEntries.flat();
-
-    console.log(`⏰ Found ${allTimeEntries.length} time entries for week ${weekNumber}`);
-
-    // 4. Collect all unique employee IDs from time entries
-    const allEmployeeIds = new Set<string>();
-    
-    allTimeEntries.forEach(entry => {
-      if (entry.employeeId) {
-        allEmployeeIds.add(entry.employeeId);
+    let nameByUid = new Map<string, string>();
+    if (performerIds.length > 0) {
+      try {
+        const directory = await userService.getEmployeeDirectory(performerIds);
+        nameByUid = new Map(directory.map(entry => [entry.id, entry.name]));
+      } catch (error) {
+        console.error('Could not resolve location performer names:', error);
       }
-      if (entry.taggedEmployeeIds && Array.isArray(entry.taggedEmployeeIds)) {
-        entry.taggedEmployeeIds.forEach((id: string) => allEmployeeIds.add(id));
-      }
-    });
-
-    console.log(`👥 Found ${allEmployeeIds.size} unique employee IDs`);
-
-    // 5. Batch fetch ALL users (chunked queries)
-    let allUsers: any[] = [];
-    
-    if (allEmployeeIds.size > 0) {
-      const employeeIdArray = Array.from(allEmployeeIds);
-      const employeeChunks = chunkArray(employeeIdArray, 30);
-      
-      const usersPromises = employeeChunks.map(async (chunk) => {
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('__name__', 'in', chunk)
-        );
-        
-        const usersSnapshot = await getDocs(usersQuery);
-        return usersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      });
-
-      const chunkedUsers = await Promise.all(usersPromises);
-      allUsers = chunkedUsers.flat();
     }
 
-    console.log(`👤 Found ${allUsers.length} users`);
-
-    // 6. Create lookup maps for O(1) access
-    const timeEntriesByLocation = new Map<string, any[]>();
-    const usersById = new Map<string, any>();
-
-    // Group time entries by location
-    allTimeEntries.forEach(entry => {
-      if (!timeEntriesByLocation.has(entry.locationId)) {
-        timeEntriesByLocation.set(entry.locationId, []);
-      }
-      timeEntriesByLocation.get(entry.locationId)!.push(entry);
-    });
-
-    // Index users by ID
-    allUsers.forEach(user => {
-      usersById.set(user.id, user);
-    });
-
-    // 7. Process each location using pre-fetched data (NO additional queries)
+    // 3. Derive per-type weekly status from the location document.
     const locationsWithStatus = locations.map(location => {
-      // Get time entries for this location from our pre-fetched data
-      const timeEntries = timeEntriesByLocation.get(location.id) || [];
-      
-      // Get tagged employees from our pre-fetched users
-      const taggedEmployeeIds = timeEntries.flatMap(entry => entry.taggedEmployeeIds || []);
-      const taggedEmployees = taggedEmployeeIds
-        .map(id => usersById.get(id))
-        .filter(Boolean); // Remove undefined values
-
-      // Add employee names to time entries
-      const enrichedTimeEntries = timeEntries.map(entry => ({
-        ...entry,
-        employeeName: usersById.get(entry.employeeId)?.name || 'Unknown Employee'
-      }));
-
       // Check if maintenance is due this week
-      const isDueForMaintenanceInSelectedWeek = 
-        weekNumber >= location.startWeek && 
+      const isDueForMaintenanceInSelectedWeek =
+        weekNumber >= location.startWeek &&
         (weekNumber - location.startWeek) % location.maintenanceFrequency === 0;
 
       // Check if edge cutting is due this week
-      const isDueForEdgeCuttingInSelectedWeek = 
-        weekNumber >= location.startWeek && 
+      const isDueForEdgeCuttingInSelectedWeek =
+        weekNumber >= location.startWeek &&
         (weekNumber - location.startWeek) % location.edgeCuttingFrequency === 0;
 
-      // If neither maintenance nor edge cutting is due, AND no time entries/tags, return early
-      if (!isDueForMaintenanceInSelectedWeek && !isDueForEdgeCuttingInSelectedWeek && enrichedTimeEntries.length === 0 && taggedEmployees.length === 0) {
-        return {
-          ...location,
-          status: 'planlagt' as LocationStatus,
-          isDueForMaintenanceInSelectedWeek,
-          isDueForEdgeCuttingInSelectedWeek,
-          timeEntries: [],
-          taggedEmployees: []
-        };
+      // A type counts as done when its last completed week is the selected
+      // week. Task types are tracked independently so completing one never
+      // marks the other as done.
+      const maintenanceStatus: LocationStatus =
+        location.lastMaintenanceWeek === weekNumber ? 'fullfort' : 'planlagt';
+      const edgeCuttingStatus: LocationStatus =
+        location.lastEdgeCuttingWeek === weekNumber ? 'fullfort' : 'planlagt';
+
+      const dueStatuses: LocationStatus[] = [];
+      if (isDueForMaintenanceInSelectedWeek) {
+        dueStatuses.push(maintenanceStatus);
+      }
+      if (isDueForEdgeCuttingInSelectedWeek) {
+        dueStatuses.push(edgeCuttingStatus);
       }
 
-      // Determine status based on time entries and tagged employees
-      let status: LocationStatus = 'planlagt';
-
-      if (enrichedTimeEntries.length > 0) {
-        if (taggedEmployeeIds.length > 0) {
-          // Check if all tagged employees have submitted their hours
-          const allTaggedEmployeesSubmitted = taggedEmployeeIds.every(employeeId =>
-            enrichedTimeEntries.some(entry => entry.employeeId === employeeId)
-          );
-          status = allTaggedEmployeesSubmitted ? 'fullfort' : 'ikke_utfort';
-        } else {
-          status = 'fullfort';
-        }
-      } else if (taggedEmployeeIds.length > 0) {
-        status = 'ikke_utfort';
-      }
+      const status: LocationStatus =
+        dueStatuses.length > 0 && dueStatuses.every(dueStatus => dueStatus === 'fullfort')
+          ? 'fullfort'
+          : 'planlagt';
 
       return {
         ...location,
         status,
+        maintenanceStatus,
+        edgeCuttingStatus,
         isDueForMaintenanceInSelectedWeek,
         isDueForEdgeCuttingInSelectedWeek,
-        timeEntries: enrichedTimeEntries,
-        taggedEmployees
+        lastMaintenanceByName: location.lastMaintenanceBy
+          ? nameByUid.get(location.lastMaintenanceBy)
+          : undefined,
+        lastEdgeCuttingByName: location.lastEdgeCuttingBy
+          ? nameByUid.get(location.lastEdgeCuttingBy)
+          : undefined,
       };
     });
 
-    console.log('✅ getLocationsWithWeeklyStatus completed successfully');
     return locationsWithStatus;
-    
   } catch (error) {
     console.error('Error getting locations with weekly status:', error);
     throw new Error('Could not get locations with weekly status');

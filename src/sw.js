@@ -61,54 +61,78 @@ registerRoute(navigationRoute);
 // 6. FCM Background Message Handler
 self.addEventListener('push', (event) => {
   console.log(`SW v${VERSION}: Push event received`, event);
-  
+
+  // FCM can deliver: (a) JSON with a `notification` payload, (b) JSON with
+  // only a `data` payload, or (c) a non-JSON blob. Never let parsing throw.
+  let payload = {};
   if (event.data) {
-    const data = event.data.json();
-    console.log('Push data:', data);
-    
-    const { notification, data: customData } = data;
-    
-    if (notification) {
-      const notificationOptions = {
-        body: notification.body,
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-192x192.png',
-        data: customData,
-        tag: customData?.type || 'general',
-        requireInteraction: true,
-        actions: []
-      };
-
-      // Add action buttons based on notification type
-      if (customData?.type === 'job_tagged') {
-        notificationOptions.actions = [
-          {
-            action: 'open_time_entry',
-            title: 'Registrer timer'
-          },
-          {
-            action: 'dismiss',
-            title: 'Lukk'
-          }
-        ];
-      } else if (customData?.type === 'time_entry_reminder') {
-        notificationOptions.actions = [
-          {
-            action: 'open_pending',
-            title: 'Se ufullførte'
-          },
-          {
-            action: 'dismiss',
-            title: 'Lukk'
-          }
-        ];
+    try {
+      payload = event.data.json();
+    } catch {
+      console.warn(`SW v${VERSION}: Push payload was not JSON, falling back to text`);
+      let text;
+      try {
+        text = event.data.text ? event.data.text() : undefined;
+      } catch {
+        text = undefined;
       }
-
-      event.waitUntil(
-        self.registration.showNotification(notification.title, notificationOptions)
-      );
+      payload = { data: { body: text } };
     }
   }
+
+  const notification = payload.notification || {};
+  const customData = payload.data || {};
+
+  const title = notification.title || customData.title || 'PlenPilot';
+  const body = notification.body || customData.body || customData.message || 'Du har mottatt et nytt varsel';
+
+  const notificationOptions = {
+    body,
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    data: customData,
+    tag: customData.type || 'general',
+    actions: []
+  };
+
+  // Add action buttons based on notification type
+  if (customData.type === 'job_tagged') {
+    notificationOptions.actions = [
+      {
+        action: 'open_time_entry',
+        title: 'Registrer timer'
+      },
+      {
+        action: 'dismiss',
+        title: 'Lukk'
+      }
+    ];
+  } else if (customData.type === 'time_entry_reminder') {
+    notificationOptions.actions = [
+      {
+        action: 'open_pending',
+        title: 'Se ufullførte'
+      },
+      {
+        action: 'dismiss',
+        title: 'Lukk'
+      }
+    ];
+  }
+
+  // Only sticky notifications (job tagging, or when explicitly requested) stay
+  // on screen until the user interacts with them.
+  if (
+    customData.requireInteraction === true ||
+    customData.requireInteraction === 'true' ||
+    customData.type === 'job_tagged'
+  ) {
+    notificationOptions.requireInteraction = true;
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(title, notificationOptions)
+  );
 });
 
 // 7. Handle notification clicks
@@ -148,10 +172,14 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// 8. AUTOMATISK OPPDATERING - skipWaiting umiddelbart
-self.addEventListener('install', (event) => {
+// 8. PWA UPDATE STRATEGY (single, documented strategy)
+// The updater uses ONE strategy: the new service worker takes over immediately
+// (self.skipWaiting() on install + clients.claim() on activate). The page side
+// (src/components/PwaUpdater.tsx) reloads exactly once on "controllerchange".
+// There is deliberately no waiting-worker / "new version available" prompt.
+self.addEventListener('install', () => {
   console.log(`SW v${VERSION}: Installing...`);
-  // Skip waiting UMIDDELBART for automatisk oppdatering
+  // Konsistent med registerType: 'autoUpdate' i vite.config.ts
   self.skipWaiting();
 });
 

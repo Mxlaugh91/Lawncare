@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,11 +19,30 @@ import {
 } from 'lucide-react';
 import { TimeEntry } from '@/types';
 
+/** Values accepted by the date formatters: Firestore timestamps, Dates or parseable strings. */
+type DateLike = { toDate: () => Date } | Date | string | number;
+
+/** Row shape produced by the employee aggregation in AdminLocations.handleCardClick. */
+interface EmployeeSummaryRow {
+  name: string;
+  totalHours: number;
+  registrations: number;
+}
+
+/** Row shape produced by the notes aggregation in AdminLocations.handleCardClick. */
+interface NoteSummaryRow {
+  date: DateLike;
+  employeeName: string;
+  notes: string;
+  hours: number;
+}
+
 interface TimeEntryDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  data: any[];
+  /** Rows handed over by the admin locations page; shape depends on `type`. */
+  data: unknown[];
   type: 'timeEntries' | 'employees' | 'edgeCutting' | 'notes';
 }
 
@@ -35,9 +53,9 @@ export const TimeEntryDetailsModal = ({
   data, 
   type 
 }: TimeEntryDetailsModalProps) => {
-  const formatDate = (date: any) => {
+  const formatDate = (date: DateLike) => {
     if (!date) return '';
-    const dateObj = date.toDate ? date.toDate() : new Date(date);
+    const dateObj = typeof date === 'object' && 'toDate' in date ? date.toDate() : new Date(date);
     return new Intl.DateTimeFormat('no-NO', {
       day: '2-digit',
       month: '2-digit',
@@ -47,19 +65,11 @@ export const TimeEntryDetailsModal = ({
     }).format(dateObj);
   };
 
-  const formatDateOnly = (date: any) => {
-    if (!date) return '';
-    const dateObj = date.toDate ? date.toDate() : new Date(date);
-    return new Intl.DateTimeFormat('no-NO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(dateObj);
-  };
-
-  const renderTimeEntries = () => (
+  const renderTimeEntries = () => {
+    const entries = data as TimeEntry[];
+    return (
     <div className="space-y-4">
-      {data.map((entry: TimeEntry, index) => (
+      {entries.map((entry, index) => (
         <div key={entry.id || index} className="border rounded-lg p-4 bg-gray-50">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
@@ -104,11 +114,14 @@ export const TimeEntryDetailsModal = ({
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderEmployees = () => (
+  const renderEmployees = () => {
+    const employees = data as EmployeeSummaryRow[];
+    return (
     <div className="space-y-3">
-      {data.map((employee, index) => (
+      {employees.map((employee, index) => (
         <div key={index} className="border rounded-lg p-4 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -129,11 +142,14 @@ export const TimeEntryDetailsModal = ({
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderEdgeCuttingEntries = () => (
+  const renderEdgeCuttingEntries = () => {
+    const entries = data as TimeEntry[];
+    return (
     <div className="space-y-4">
-      {data.map((entry: TimeEntry, index) => (
+      {entries.map((entry, index) => (
         <div key={entry.id || index} className="border rounded-lg p-4 bg-amber-50">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
@@ -169,11 +185,14 @@ export const TimeEntryDetailsModal = ({
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderNotes = () => (
+  const renderNotes = () => {
+    const notes = data as NoteSummaryRow[];
+    return (
     <div className="space-y-4">
-      {data.map((noteEntry, index) => (
+      {notes.map((noteEntry, index) => (
         <div key={index} className="border rounded-lg p-4 bg-purple-50">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
@@ -198,7 +217,8 @@ export const TimeEntryDetailsModal = ({
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
   const renderContent = () => {
     if (data.length === 0) {

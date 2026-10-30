@@ -7,14 +7,18 @@
 import {
   sendPushNotification,
   sendBulkNotifications,
-  cleanupOldNotifications
+  cleanupOldNotifications,
+  syncUserDirectory,
+  backfillUserDirectory
 } from './notifications';
 
 // Export all functions so Firebase can discover and deploy them
 export {
   sendPushNotification,
   sendBulkNotifications,
-  cleanupOldNotifications
+  cleanupOldNotifications,
+  syncUserDirectory,
+  backfillUserDirectory
 };
 
 // You can add more function exports here as your project grows

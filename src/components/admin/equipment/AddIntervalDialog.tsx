@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +30,7 @@ export const AddIntervalDialog = ({ isOpen, onClose, onSubmit, loading }: AddInt
     try {
       await onSubmit({ description, hourInterval });
       onClose();
-    } catch (error) {
+    } catch {
       // Error handling is done in parent component
     }
   };

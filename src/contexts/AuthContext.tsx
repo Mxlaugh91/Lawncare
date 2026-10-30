@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { 
   User, 
   signInWithEmailAndPassword, 
@@ -31,83 +31,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Debug effect for isAdmin changes
   useEffect(() => {
-    console.log('isAdmin state changed:', { 
-      isAdmin,
-      userEmail: currentUser?.email,
-      timestamp: new Date().toISOString()
-    });
-  }, [isAdmin, currentUser?.email]);
+    let cancelled = false;
 
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed - User:', user?.email);
       setCurrentUser(user);
-      
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          console.log('User document exists:', userDoc.exists());
-          console.log('User document data:', userDoc.data());
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            console.log('User role from DB:', userData.role);
-            const userIsAdmin = userData.role === 'admin';
-            console.log('Setting isAdmin to:', userIsAdmin);
-            setIsAdmin(userIsAdmin);
-          } else {
-            console.log('No user document found, setting isAdmin to false');
-            setIsAdmin(false);
-          }
-        } catch (error) {
-          console.error('Error checking user role:', error);
+
+      if (!user) {
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        // The lookup may resolve after a logout or an account switch: only
+        // apply the role if this user is still the signed-in one.
+        if (cancelled || auth.currentUser?.uid !== user.uid) return;
+
+        const userData = userDoc.data();
+        setIsAdmin(userDoc.exists() && userData?.role === 'admin');
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        if (!cancelled && auth.currentUser?.uid === user.uid) {
           setIsAdmin(false);
         }
-      } else {
-        console.log('No user, setting isAdmin to false');
-        setIsAdmin(false);
+      } finally {
+        if (!cancelled && auth.currentUser?.uid === user.uid) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    console.log('Login attempt for:', email);
+  const login = useCallback(async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('Login successful, fetching user document');
-    
+
     const userDocRef = doc(db, 'users', userCredential.user.uid);
     const userDoc = await getDoc(userDocRef);
-    console.log('User document:', userDoc.exists() ? userDoc.data() : 'not found');
-    
     const isUserAdmin = userDoc.exists() && userDoc.data()?.role === 'admin';
-    console.log('Login - User role:', userDoc.data()?.role);
-    console.log('Login - Setting isAdmin to:', isUserAdmin);
+
     setIsAdmin(isUserAdmin);
     return isUserAdmin;
-  };
+  }, []);
 
-  const logout = async () => {
-    console.log('Logout initiated');
+  const logout = useCallback(async () => {
     await signOut(auth);
-    console.log('Logout successful, setting isAdmin to false');
     setIsAdmin(false);
-  };
+  }, []);
 
-  const value = {
-    currentUser,
-    isAdmin,
-    loading,
-    login,
-    logout
-  };
+  const value = useMemo(
+    () => ({
+      currentUser,
+      isAdmin,
+      loading,
+      login,
+      logout,
+    }),
+    [currentUser, isAdmin, loading, login, logout]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

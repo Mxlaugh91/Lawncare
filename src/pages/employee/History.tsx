@@ -10,6 +10,45 @@ import { TimeEntry } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import * as timeEntryService from '@/services/timeEntryService';
 import { useToast } from '@/hooks/use-toast';
+import { getISOWeekNumber, getISOWeekDates } from '@/lib/utils';
+
+const startOfDay = (date: Date): Date => {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+};
+
+const endOfDay = (date: Date): Date => {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 999);
+  return result;
+};
+
+const addDays = (date: Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+// ISO year of a date (can differ from the calendar year around New Year).
+const getISOWeekYear = (date: Date): number => {
+  const target = new Date(date.valueOf());
+  const dayNumber = (date.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNumber + 3);
+  return target.getFullYear();
+};
+
+const safeToDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  const maybeTimestamp = value as { toDate?: () => Date };
+  if (typeof maybeTimestamp.toDate !== 'function') return null;
+  try {
+    return maybeTimestamp.toDate();
+  } catch (error) {
+    console.error('Could not read timestamp:', error);
+    return null;
+  }
+};
 
 const EmployeeHistory = () => {
   const { currentUser } = useAuth();
@@ -35,29 +74,32 @@ const EmployeeHistory = () => {
         let endDate: Date | undefined;
         
         const now = new Date();
+        // ISO weeks start on Monday; use the shared helpers for consistency
+        // with the rest of the app.
+        const currentWeek = getISOWeekNumber(now);
+        const { start: thisWeekStart } = getISOWeekDates(currentWeek, getISOWeekYear(now));
         
         switch (periodFilter) {
           case 'today':
-            startDate = new Date(now.setHours(0, 0, 0, 0));
-            endDate = new Date(now.setHours(23, 59, 59, 999));
+            startDate = startOfDay(now);
+            endDate = endOfDay(now);
             break;
           case 'this-week':
-            startDate = new Date(now.setDate(now.getDate() - now.getDay()));
-            endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
+            startDate = startOfDay(thisWeekStart);
+            endDate = endOfDay(addDays(thisWeekStart, 6));
             break;
           case 'last-week':
-            startDate = new Date(now.setDate(now.getDate() - now.getDay() - 7));
-            endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
+            startDate = startOfDay(addDays(thisWeekStart, -7));
+            endDate = endOfDay(addDays(thisWeekStart, -1));
             break;
           case 'this-month':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+            // Last day of the month, ending at 23:59:59.999 so no entries are dropped.
+            endDate = endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
             break;
           case 'last-month':
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+            endDate = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
             break;
         }
         
@@ -100,6 +142,13 @@ const EmployeeHistory = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  };
+
+  // Guards against missing/malformed timestamps so a single bad document
+  // cannot blank the whole route.
+  const formatEntryDate = (date: unknown) => {
+    const value = safeToDate(date);
+    return value ? formatDate(value) : '-';
   };
 
   return (
@@ -195,7 +244,7 @@ const EmployeeHistory = () => {
               <TableBody>
                 {timeEntries.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell>{formatDate(entry.date.toDate())}</TableCell>
+                    <TableCell>{formatEntryDate(entry.date)}</TableCell>
                     <TableCell>{entry.hours} {t('common.hours')}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {entry.edgeCuttingDone ? t('common.yes') : t('common.no')}

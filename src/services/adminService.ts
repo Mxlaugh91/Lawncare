@@ -1,13 +1,19 @@
+import { TimeEntry } from '@/types';
 import { getISOWeekNumber } from '@/lib/utils';
 import * as locationService from './locationService';
 import * as timeEntryService from './timeEntryService';
+
+export interface RecentActivityEntry extends TimeEntry {
+  locationName: string;
+  employeeName: string;
+}
 
 export interface DashboardStats {
   remainingLocations: number;
   completedThisWeek: number;
   totalLocations: number;
   activeEmployees: number;
-  recentActivity: any[];
+  recentActivity: RecentActivityEntry[];
 }
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TimeEntry } from '@/types';
+import { TimeEntry, TimeEntryInput } from '@/types';
 import * as timeEntryService from '@/services/timeEntryService';
 
 interface TimeEntryState {
@@ -8,7 +8,7 @@ interface TimeEntryState {
   error: string | null;
   
   // Actions
-  addTimeEntry: (entryData: Omit<TimeEntry, 'id' | 'createdAt'>) => Promise<string>;
+  addTimeEntry: (entryData: TimeEntryInput) => Promise<string>;
   getTimeEntriesForLocation: (locationId: string, weekNumber?: number) => Promise<TimeEntry[]>;
   getTimeEntriesForEmployee: (employeeId: string, startDate?: Date, endDate?: Date) => Promise<TimeEntry[]>;
   getWeeklyAggregatedHoursByEmployee: () => Promise<Record<string, number>>;
@@ -17,7 +17,7 @@ interface TimeEntryState {
   getPendingTimeEntriesForEmployee: (employeeId: string) => Promise<TimeEntry[]>;
 }
 
-export const useTimeEntryStore = create<TimeEntryState>((set, get) => ({
+export const useTimeEntryStore = create<TimeEntryState>((set) => ({
   timeEntries: [],
   loading: false,
   error: null,

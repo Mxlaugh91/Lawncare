@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { LocationWithStatus } from '@/types';
+import {
+  formatLatestEntryDate,
+  getEdgeCuttingStatusDisplay,
+  getLocationEmployeeSummary,
+  getLocationTotalHours,
+  getMaintenanceStatusDisplay
+} from './locationStatusDisplay';
 
 interface LocationMobileCardsProps {
   filteredLocations: LocationWithStatus[];
@@ -37,64 +44,6 @@ const getStatusBadge = (location: LocationWithStatus) => {
         </Badge>
       );
   }
-};
-
-const getMaintenanceStatus = (location: LocationWithStatus) => {
-  if (!location.isDueForMaintenanceInSelectedWeek) {
-    return "Ikke aktuelt";
-  }
-  switch (location.status) {
-    case 'fullfort':
-      return <span className="text-primary font-medium">Fullført</span>;
-    case 'ikke_utfort':
-      return <span className="text-destructive">Ikke utført</span>;
-    default:
-      return <span className="text-amber-600">Planlagt</span>;
-  }
-};
-
-const getEdgeCuttingStatus = (location: LocationWithStatus) => {
-  if (!location.isDueForEdgeCuttingInSelectedWeek) {
-    return "Ikke aktuelt";
-  }
-  switch (location.status) {
-    case 'fullfort':
-      return <span className="text-primary font-medium">Fullført</span>;
-    case 'ikke_utfort':
-      return <span className="text-destructive">Ikke utført</span>;
-    default:
-      return <span className="text-amber-600">Planlagt</span>;
-  }
-};
-
-const getTotalHours = (location: LocationWithStatus) => {
-  if (!location.timeEntries || location.timeEntries.length === 0) {
-    return 0;
-  }
-  return location.timeEntries.reduce((total, entry) => total + entry.hours, 0);
-};
-
-const getEmployeeSummary = (location: LocationWithStatus) => {
-  if (!location.timeEntries || location.timeEntries.length === 0) {
-    return 'Ikke registrert';
-  }
-
-  // Get unique employee names
-  const uniqueEmployees = Array.from(
-    new Set(location.timeEntries.map(entry => entry.employeeName).filter(Boolean))
-  );
-
-  if (uniqueEmployees.length === 0) {
-    return 'Ikke registrert';
-  }
-
-  if (uniqueEmployees.length === 1) {
-    return uniqueEmployees[0];
-  }
-
-  // Show first employee + count of others
-  const additionalCount = uniqueEmployees.length - 1;
-  return `${uniqueEmployees[0]} (+${additionalCount} andre)`;
 };
 
 export const LocationMobileCards = ({ 
@@ -144,14 +93,14 @@ export const LocationMobileCards = ({
                   <div>
                     <div className="text-xs font-medium">Gressklipping</div>
                     <div className="text-xs">
-                      {getMaintenanceStatus(location)}
+                      {getMaintenanceStatusDisplay(location)}
                     </div>
                   </div>
 
                   <div>
                     <div className="text-xs font-medium">Kantklipping</div>
                     <div className="text-xs">
-                      {getEdgeCuttingStatus(location)}
+                      {getEdgeCuttingStatusDisplay(location)}
                     </div>
                   </div>
 
@@ -160,23 +109,21 @@ export const LocationMobileCards = ({
                       <div>
                         <div className="text-xs font-medium">Utført</div>
                         <div className="text-xs">
-                          {new Intl.DateTimeFormat('no-NO', {
-                            weekday:'long',
-                          }).format(location.timeEntries[0].date.toDate())}
+                          {formatLatestEntryDate(location)}
                         </div>
                       </div>
 
                       <div>
                         <div className="text-xs font-medium">Tidsbruk</div>
                         <div className="text-xs">
-                          {getTotalHours(location)} timer
+                          {getLocationTotalHours(location)} timer
                         </div>
                       </div>
 
                       <div>
                         <div className="text-xs font-medium">Utført av</div>
                         <div className="text-xs">
-                          {getEmployeeSummary(location)}
+                          {getLocationEmployeeSummary(location)}
                         </div>
                       </div>
                     </>
